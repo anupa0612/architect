@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Control Center — ArchHire</title>
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<nav id="nav"></nav>
+
+<div class="dashboard">
+  <div class="dash-header">
+    <div>
+      <div class="dash-welcome">Admin <em style="font-style:italic">Control Center</em></div>
+      <p class="dash-sub">Full platform monitoring &amp; control · live activity tracking</p>
+    </div>
+    <div style="display:flex;gap:0.6rem;align-items:center">
+      <label class="muted" style="font-size:0.78rem;display:flex;align-items:center;gap:0.4rem">
+        <input type="checkbox" id="auto-refresh" checked style="width:auto"> Auto-refresh
+      </label>
+      <button class="btn-secondary btn-sm" onclick="refreshAll()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="stat-grid" id="stat-grid"></div>
+  <div class="stat-grid" id="stat-grid-2" style="margin-top:-1rem"></div>
+
+  <div class="dash-tabs">
+    <button class="dash-tab active" data-tab="overview">Overview</button>
+    <button class="dash-tab" data-tab="users">Users</button>
+    <button class="dash-tab" data-tab="projects">Projects</button>
+    <button class="dash-tab" data-tab="proposals">Proposals</button>
+    <button class="dash-tab" data-tab="activity">Activity Monitor</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="dash-tab-content active" id="tab-overview">
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1.5rem">
+      <div class="stat-card" style="padding:1.8rem">
+        <div class="label" style="margin-bottom:1.5rem">Platform Activity — Last 7 Days</div>
+        <div class="bar-chart" id="trend-chart" style="margin-bottom:1.5rem"></div>
+      </div>
+      <div class="stat-card" style="padding:1.8rem">
+        <div class="label" style="margin-bottom:1rem">Live Activity</div>
+        <div class="activity-feed" id="mini-feed" style="max-height:260px;border:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="dash-tab-content" id="tab-users">
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Last Login</th><th>Actions</th></tr></thead>
+      <tbody id="users-body"></tbody>
+    </table>
+  </div>
+
+  <!-- PROJECTS -->
+  <div class="dash-tab-content" id="tab-projects">
+    <table class="data-table">
+      <thead><tr><th>Title</th><th>Client</th><th>Type</th><th>Budget</th><th>Proposals</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="projects-body"></tbody>
+    </table>
+  </div>
+
+  <!-- PROPOSALS -->
+  <div class="dash-tab-content" id="tab-proposals">
+    <table class="data-table">
+      <thead><tr><th>Project</th><th>Architect</th><th>Package</th><th>Quote</th><th>Status</th><th>Sent</th></tr></thead>
+      <tbody id="proposals-body"></tbody>
+    </table>
+  </div>
+
+  <!-- ACTIVITY -->
+  <div class="dash-tab-content" id="tab-activity">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <p class="muted" style="font-size:0.85rem">Every page view and action across the platform is logged here.</p>
+      <button class="btn-secondary btn-sm btn-danger" onclick="clearActivity()">Clear Log</button>
+    </div>
+    <div class="activity-feed" id="activity-feed"></div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+let AUTO;
+
+async function init() {
+  const me = await renderNav();
+  if (!me) return;
+  await refreshAll();
+  startAuto();
+  document.getElementById('auto-refresh').addEventListener('change', startAuto);
+}
+
+function startAuto() {
+  clearInterval(AUTO);
+  if (document.getElementById('auto-refresh').checked) {
+    AUTO = setInterval(() => { loadStats(); loadActivity(); }, 5000);
+  }
+}
+
+async function refreshAll() {
+  await Promise.all([loadStats(), loadUsers(), loadProjects(), loadProposals(), loadActivity()]);
+}
+
+async function loadStats() {
+  const { stats, trend } = await api('/api/admin/stats');
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card"><div class="label">Total Users</div><div class="value">${stats.users}</div></div>
+    <div class="stat-card"><div class="label">Customers</div><div class="value">${stats.customers}</div></div>
+    <div class="stat-card"><div class="label">Architects</div><div class="value">${stats.architects}</div></div>
+    <div class="stat-card"><div class="label">Suspended</div><div class="value" style="color:var(--error)">${stats.suspended}</div></div>`;
+  document.getElementById('stat-grid-2').innerHTML = `
+    <div class="stat-card"><div class="label">Projects</div><div class="value">${stats.projects}</div></div>
+    <div class="stat-card"><div class="label">Proposals</div><div class="value">${stats.proposals}</div></div>
+    <div class="stat-card"><div class="label">Hires</div><div class="value gold">${stats.hiredProjects}</div></div>
+    <div class="stat-card"><div class="label">Actions Today</div><div class="value gold">${stats.actionsToday}</div></div>`;
+  renderTrend(trend);
+}
+
+function renderTrend(trend) {
+  const chart = document.getElementById('trend-chart');
+  if (!trend.length) { chart.innerHTML = '<p class="muted">No activity yet.</p>'; return; }
+  const max = Math.max(...trend.map(t => t.n), 1);
+  chart.innerHTML = trend.map(t => {
+    const h = Math.round((t.n / max) * 100);
+    const label = t.day.slice(5);
+    return `<div class="bar" style="height:${h}%"><span class="bar-value">${t.n}</span><span class="bar-label">${label}</span></div>`;
+  }).join('');
+}
+
+async function loadUsers() {
+  const { users } = await api('/api/admin/users');
+  document.getElementById('users-body').innerHTML = users.map(u => `
+    <tr>
+      <td style="color:var(--ink)">${escapeHtml(u.name)}</td>
+      <td>${escapeHtml(u.email)}</td>
+      <td><span class="role-tag role-${u.role}">${escapeHtml(u.role)}</span></td>
+      <td><span class="status-badge status-${u.status}">${escapeHtml(u.status)}</span></td>
+      <td>${escapeHtml((u.created_at || '').slice(0, 10))}</td>
+      <td>${u.last_login ? timeAgo(u.last_login) : 'never'}</td>
+      <td>${u.role === 'admin' ? '<span class="muted">—</span>' : `
+        <button class="btn-hire btn-sm" onclick="toggleStatus(${u.id},'${u.status === 'active' ? 'suspended' : 'active'}')">${u.status === 'active' ? 'Suspend' : 'Activate'}</button>
+        <button class="btn-hire btn-sm btn-danger" onclick="delUser(${u.id})">Delete</button>`}</td>
+    </tr>`).join('');
+}
+
+async function toggleStatus(id, status) {
+  try { await api(`/api/admin/users/${id}/status`, { method: 'POST', body: { status } }); toast('User ' + status + '.'); loadUsers(); loadStats(); }
+  catch (e) { toast(e.message, true); }
+}
+async function delUser(id) {
+  if (!confirm('Delete this user and all their data? This cannot be undone.')) return;
+  try { await api(`/api/admin/users/${id}`, { method: 'DELETE' }); toast('User deleted.'); refreshAll(); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function loadProjects() {
+  const { projects } = await api('/api/admin/projects');
+  document.getElementById('projects-body').innerHTML = projects.length ? projects.map(p => `
+    <tr>
+      <td style="color:var(--ink)">${escapeHtml(p.title)}</td>
+      <td>${escapeHtml(p.customer_name)}</td>
+      <td>${escapeHtml(p.type || '—')}</td>
+      <td>${escapeHtml(p.budget || '—')}</td>
+      <td>${p.proposal_count}</td>
+      <td><span class="status-badge status-${p.status}">${escapeHtml(p.status)}</span></td>
+      <td><button class="btn-hire btn-sm btn-danger" onclick="delProject(${p.id})">Delete</button></td>
+    </tr>`).join('') : '<tr><td colspan="7" class="empty">No projects.</td></tr>';
+}
+async function delProject(id) {
+  if (!confirm('Delete this project?')) return;
+  try { await api(`/api/admin/projects/${id}`, { method: 'DELETE' }); toast('Project deleted.'); refreshAll(); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function loadProposals() {
+  const { proposals } = await api('/api/admin/proposals');
+  document.getElementById('proposals-body').innerHTML = proposals.length ? proposals.map(p => `
+    <tr>
+      <td style="color:var(--ink)">${escapeHtml(p.project_title)}</td>
+      <td>${escapeHtml(p.architect_name)}</td>
+      <td>${escapeHtml(p.package_name || '—')}</td>
+      <td>${escapeHtml(p.quote || '—')}</td>
+      <td><span class="status-badge status-${p.status}">${escapeHtml(p.status)}</span></td>
+      <td>${timeAgo(p.created_at)}</td>
+    </tr>`).join('') : '<tr><td colspan="6" class="empty">No proposals.</td></tr>';
+}
+
+async function loadActivity() {
+  const { logs } = await api('/api/admin/activity?limit=150');
+  const rowHtml = l => `
+    <div class="activity-row">
+      <div class="activity-dot"></div>
+      <div>
+        <div class="activity-action">${escapeHtml(l.action)}</div>
+        <div class="activity-meta">${l.user_name ? escapeHtml(l.user_name) + ' (' + escapeHtml(l.role) + ')' : escapeHtml(l.role || 'guest')}${l.detail ? ' · ' + escapeHtml(l.detail) : ''}${l.ip ? ' · ' + escapeHtml(l.ip) : ''}</div>
+      </div>
+      <div class="activity-time">${timeAgo(l.created_at)}</div>
+    </div>`;
+  document.getElementById('activity-feed').innerHTML = logs.length ? logs.map(rowHtml).join('') : '<p class="empty">No activity logged yet.</p>';
+  document.getElementById('mini-feed').innerHTML = logs.slice(0, 12).map(rowHtml).join('') || '<p class="empty">No activity.</p>';
+}
+
+async function clearActivity() {
+  if (!confirm('Clear the entire activity log?')) return;
+  try { await api('/api/admin/activity/clear', { method: 'POST' }); toast('Activity log cleared.'); loadActivity(); loadStats(); }
+  catch (e) { toast(e.message, true); }
+}
+
+document.querySelectorAll('.dash-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Dashboard — ArchHire</title>
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<nav id="nav"></nav>
+
+<div class="dashboard">
+  <div class="dash-header">
+    <div>
+      <div class="dash-welcome">Welcome back, <em style="font-style:italic" id="welcome-name">Client</em></div>
+      <p class="dash-sub">Client Portal · Manage your projects and proposals</p>
+    </div>
+    <button class="btn-primary" onclick="openPostModal()">+ Post a Project</button>
+  </div>
+
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <div class="dash-tabs">
+    <button class="dash-tab active" data-tab="projects">My Projects</button>
+    <button class="dash-tab" data-tab="proposals">Proposals Received</button>
+  </div>
+
+  <div class="dash-tab-content active" id="tab-projects">
+    <div class="cards-list" id="projects-list"></div>
+  </div>
+
+  <div class="dash-tab-content" id="tab-proposals">
+    <div id="all-proposals"></div>
+  </div>
+</div>
+
+<!-- POST PROJECT MODAL -->
+<div class="modal-overlay" id="post-modal">
+  <div class="modal wide">
+    <div class="modal-pad">
+      <div class="modal-head">
+        <h3>Post a Project Brief</h3>
+        <button class="modal-x" onclick="closePost()">✕</button>
+      </div>
+      <form id="post-form">
+        <div class="form-row">
+          <div class="form-group"><label>Project Title</label><input type="text" id="p-title" placeholder="e.g. Lakeside Residence" required></div>
+          <div class="form-group"><label>Location</label><input type="text" id="p-location" placeholder="City, Country"></div>
+        </div>
+        <div class="form-group">
+          <label>Project Type</label>
+          <select id="p-type">
+            <option>Residential</option><option>Commercial</option><option>Mixed-Use</option>
+            <option>Landscape</option><option>Interior</option><option>Renovation</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Description</label><textarea id="p-desc" placeholder="Describe your vision, requirements and ideas..."></textarea></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Property Size</label>
+            <select id="p-size"><option value="">Select</option><option>Under 100 sqm</option><option>100 – 300 sqm</option><option>300 – 600 sqm</option><option>600 – 1,000 sqm</option><option>Over 1,000 sqm</option></select>
+          </div>
+          <div class="form-group">
+            <label>Timeline</label>
+            <select id="p-timeline"><option value="">Select</option><option>Less than 6 months</option><option>6 – 12 months</option><option>1 – 2 years</option><option>2 – 3 years</option><option>Flexible</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Budget</label><input type="text" id="p-budget" placeholder="e.g. $150,000"></div>
+          <div class="form-group"><label>Preferred Style</label><input type="text" id="p-style" placeholder="e.g. Contemporary, Minimalist"></div>
+        </div>
+        <button class="btn-primary" type="submit" style="width:100%">Submit Project Brief ✦</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW PROPOSALS MODAL -->
+<div class="modal-overlay" id="prop-modal">
+  <div class="modal wide"><div class="modal-pad" id="prop-content"></div></div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+let ME;
+
+async function init() {
+  ME = await renderNav();
+  if (!ME) return;
+  document.getElementById('welcome-name').textContent = ME.name.split(' ')[0];
+  await loadProjects();
+}
+
+async function loadProjects() {
+  const { projects } = await api('/api/customer/projects');
+  const open = projects.filter(p => p.status === 'open').length;
+  const hired = projects.filter(p => p.status === 'hired').length;
+  const totalProps = projects.reduce((s, p) => s + p.proposal_count, 0);
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card"><div class="label">Total Projects</div><div class="value">${projects.length}</div></div>
+    <div class="stat-card"><div class="label">Open Briefs</div><div class="value">${open}</div></div>
+    <div class="stat-card"><div class="label">Proposals Received</div><div class="value gold">${totalProps}</div></div>
+    <div class="stat-card"><div class="label">Architects Hired</div><div class="value">${hired}</div></div>`;
+
+  const list = document.getElementById('projects-list');
+  if (!projects.length) {
+    list.innerHTML = '<p class="empty">No projects yet. Click “Post a Project” to get started.</p>';
+  } else {
+    list.innerHTML = projects.map(p => `
+      <div class="list-card">
+        <div>
+          <div class="lc-type">${escapeHtml(p.type || 'Project')}</div>
+          <div class="lc-title">${escapeHtml(p.title)}</div>
+          <div class="lc-details">
+            <div class="lc-detail"><strong>${escapeHtml(p.budget || '—')}</strong>Budget</div>
+            <div class="lc-detail"><strong>${escapeHtml(p.location || '—')}</strong>Location</div>
+            <div class="lc-detail"><strong>${escapeHtml(p.timeline || '—')}</strong>Timeline</div>
+            <div class="lc-detail"><strong>${p.proposal_count}</strong>Proposals</div>
+          </div>
+        </div>
+        <div class="lc-actions">
+          <span class="status-badge status-${p.status}">${escapeHtml(p.status)}</span>
+          <button class="btn-hire btn-sm" onclick="viewProposals(${p.id})">View Proposals (${p.proposal_count})</button>
+        </div>
+      </div>`).join('');
+  }
+  renderAllProposals(projects);
+}
+
+async function renderAllProposals(projects) {
+  const wrap = document.getElementById('all-proposals');
+  const withProps = projects.filter(p => p.proposal_count > 0);
+  if (!withProps.length) { wrap.innerHTML = '<p class="empty">No proposals received yet.</p>'; return; }
+  wrap.innerHTML = withProps.map(p =>
+    `<button class="btn-secondary btn-sm" style="margin:0 0.5rem 0.5rem 0" onclick="viewProposals(${p.id})">${escapeHtml(p.title)} · ${p.proposal_count}</button>`
+  ).join('') + '<p class="muted" style="margin-top:1rem;font-size:0.82rem">Click a project to review and accept proposals.</p>';
+}
+
+async function viewProposals(projectId) {
+  const { project, proposals } = await api(`/api/customer/projects/${projectId}/proposals`);
+  document.getElementById('prop-content').innerHTML = `
+    <div class="modal-head">
+      <h3>${escapeHtml(project.title)}</h3>
+      <button class="modal-x" onclick="document.getElementById('prop-modal').classList.remove('open')">✕</button>
+    </div>
+    ${proposals.length ? proposals.map(pr => `
+      <div class="package-card ${pr.status === 'accepted' ? 'featured' : ''}">
+        <div class="pkg-header">
+          <div>
+            <div class="pkg-name">${escapeHtml(pr.architect_name)}</div>
+            <div class="muted" style="font-size:0.78rem">${escapeHtml(pr.studio || '')} · ${escapeHtml(pr.location || '')} · ★ ${pr.rating ?? '—'}</div>
+          </div>
+          <span class="status-badge status-${pr.status}">${escapeHtml(pr.status)}</span>
+        </div>
+        <p class="muted" style="font-size:0.85rem;margin:0.4rem 0 0.8rem">${escapeHtml(pr.message || 'No message.')}</p>
+        <div class="lc-details">
+          <div class="lc-detail"><strong>${escapeHtml(pr.package_name || '—')}</strong>Package</div>
+          <div class="lc-detail"><strong>${escapeHtml(pr.quote || '—')}</strong>Quote</div>
+          <div class="lc-detail"><strong>${escapeHtml(pr.timeline || '—')}</strong>Timeline</div>
+        </div>
+        ${pr.status === 'sent' ? `
+          <div style="display:flex;gap:0.6rem;margin-top:1rem">
+            <button class="btn-hire btn-sm" onclick="decide(${pr.id},'accept',${projectId})">Accept ✓</button>
+            <button class="btn-hire btn-sm btn-danger" onclick="decide(${pr.id},'decline',${projectId})">Decline</button>
+          </div>` : ''}
+      </div>`).join('') : '<p class="empty">No proposals yet for this project.</p>'}`;
+  document.getElementById('prop-modal').classList.add('open');
+}
+
+async function decide(id, decision, projectId) {
+  try {
+    await api(`/api/customer/proposals/${id}/${decision}`, { method: 'POST' });
+    toast(`Proposal ${decision === 'accept' ? 'accepted' : 'declined'}.`);
+    await loadProjects();
+    viewProposals(projectId);
+  } catch (e) { toast(e.message, true); }
+}
+
+function openPostModal() { document.getElementById('post-modal').classList.add('open'); }
+function closePost() { document.getElementById('post-modal').classList.remove('open'); }
+
+document.getElementById('post-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    title: document.getElementById('p-title').value,
+    type: document.getElementById('p-type').value,
+    location: document.getElementById('p-location').value,
+    description: document.getElementById('p-desc').value,
+    size: document.getElementById('p-size').value,
+    timeline: document.getElementById('p-timeline').value,
+    budget: document.getElementById('p-budget').value,
+    style: document.getElementById('p-style').value
+  };
+  try {
+    await api('/api/customer/projects', { method: 'POST', body });
+    closePost();
+    document.getElementById('post-form').reset();
+    toast('Project posted! Architects can now see it.');
+    await loadProjects();
+  } catch (err) { toast(err.message, true); }
+});
+
+[['post-modal', closePost], ['prop-modal', () => document.getElementById('prop-modal').classList.remove('open')]]
+  .forEach(([id, fn]) => document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) fn(); }));
+
+document.querySelectorAll('.dash-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+init();
+</script>
+</body>
+</html>

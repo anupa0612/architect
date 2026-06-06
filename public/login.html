@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In — ArchHire</title>
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-visual">
+    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=80" alt="Architecture">
+    <div class="auth-visual-text">
+      <a href="/" class="nav-logo" style="font-size:1.8rem;color:var(--cream)">Arch<span style="color:var(--gold)">Hire</span></a>
+      <h2 style="margin-top:1.5rem">Welcome back.</h2>
+      <p>Log in to manage your projects, proposals, and the design journey ahead.</p>
+    </div>
+  </div>
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <h1>Log In</h1>
+      <p class="sub">Access your ArchHire dashboard.</p>
+      <div class="alert" id="alert"></div>
+      <form id="login-form">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="your@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        <button class="btn-primary" type="submit" style="width:100%">Log In →</button>
+      </form>
+      <p class="auth-alt">New here? <a href="/register.html">Create an account</a></p>
+      <div class="demo-creds">
+        <strong>Demo accounts</strong><br>
+        Admin: <code>admin@archhire.test</code> / <code>admin123</code><br>
+        Customer: <code>customer@archhire.test</code> / <code>cust123</code><br>
+        Architect: <code>nadia@archhire.test</code> / <code>arch123</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+getCurrentUser().then(u => { if (u) location.href = dashboardFor(u.role); });
+
+const alertBox = document.getElementById('alert');
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  alertBox.className = 'alert';
+  try {
+    const { user } = await api('/api/auth/login', {
+      method: 'POST',
+      body: { email: document.getElementById('email').value, password: document.getElementById('password').value }
+    });
+    location.href = dashboardFor(user.role);
+  } catch (err) {
+    alertBox.textContent = err.message;
+    alertBox.className = 'alert error';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architect Portal — ArchHire</title>
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<nav id="nav"></nav>
+
+<div class="dashboard">
+  <div class="dash-header">
+    <div>
+      <div class="dash-welcome">Welcome back, <em style="font-style:italic" id="welcome-name">Architect</em></div>
+      <p class="dash-sub" id="studio-sub">Architect Portal</p>
+    </div>
+  </div>
+
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <div class="dash-tabs">
+    <button class="dash-tab active" data-tab="requests">Open Requests</button>
+    <button class="dash-tab" data-tab="proposals">My Proposals</button>
+    <button class="dash-tab" data-tab="profile">My Profile</button>
+  </div>
+
+  <div class="dash-tab-content active" id="tab-requests"><div class="cards-list" id="requests-list"></div></div>
+  <div class="dash-tab-content" id="tab-proposals"><div class="cards-list" id="proposals-list"></div></div>
+  <div class="dash-tab-content" id="tab-profile"><div id="profile-form" style="max-width:680px"></div></div>
+</div>
+
+<!-- SEND PROPOSAL MODAL -->
+<div class="modal-overlay" id="send-modal">
+  <div class="modal">
+    <div class="modal-pad">
+      <div class="modal-head"><h3>Send a Proposal</h3><button class="modal-x" onclick="closeSend()">✕</button></div>
+      <div id="send-target" class="muted" style="font-size:0.85rem;margin-bottom:1rem"></div>
+      <form id="send-form">
+        <input type="hidden" id="s-project">
+        <div class="form-group"><label>Package Name</label><input type="text" id="s-package" placeholder="e.g. Full Design Package"></div>
+        <div class="form-group"><label>Personalized Message</label><textarea id="s-message" placeholder="Why you're the right fit..."></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Proposed Timeline</label><input type="text" id="s-timeline" placeholder="e.g. 8 months"></div>
+          <div class="form-group"><label>Your Quote</label><input type="text" id="s-quote" placeholder="e.g. $28,000"></div>
+        </div>
+        <button class="btn-primary" type="submit" style="width:100%">Send Proposal ✦</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+let ME;
+
+async function init() {
+  ME = await renderNav();
+  if (!ME) return;
+  document.getElementById('welcome-name').textContent = ME.name.split(' ')[0];
+  await Promise.all([loadStats(), loadRequests(), loadProposals(), loadProfile()]);
+}
+
+async function loadStats() {
+  const s = await api('/api/architect/stats');
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card"><div class="label">Open Requests</div><div class="value">${s.openRequests}</div></div>
+    <div class="stat-card"><div class="label">Proposals Sent</div><div class="value">${s.sent}</div></div>
+    <div class="stat-card"><div class="label">Accepted</div><div class="value gold">${s.accepted}</div></div>
+    <div class="stat-card"><div class="label">Hire Rate</div><div class="value gold">${s.hireRate}%</div></div>`;
+}
+
+async function loadRequests() {
+  const { requests } = await api('/api/architect/requests');
+  const list = document.getElementById('requests-list');
+  if (!requests.length) { list.innerHTML = '<p class="empty">No open requests right now. Check back soon.</p>'; return; }
+  list.innerHTML = requests.map(r => `
+    <div class="list-card">
+      <div>
+        <div class="lc-type">${escapeHtml(r.type || 'Project')}</div>
+        <div class="lc-title">${escapeHtml(r.title)}</div>
+        <p class="muted" style="font-size:0.82rem;margin:0.3rem 0">${escapeHtml(r.description || '')}</p>
+        <div class="lc-details">
+          <div class="lc-detail"><strong>${escapeHtml(r.budget || '—')}</strong>Budget</div>
+          <div class="lc-detail"><strong>${escapeHtml(r.size || '—')}</strong>Size</div>
+          <div class="lc-detail"><strong>${escapeHtml(r.timeline || '—')}</strong>Timeline</div>
+          <div class="lc-detail"><strong>${escapeHtml(r.style || '—')}</strong>Style</div>
+        </div>
+      </div>
+      <div class="lc-actions">
+        <span class="status-badge status-${r.status}">${escapeHtml(r.status)}</span>
+        ${r.mine ? '<span class="muted" style="font-size:0.75rem">Proposal sent ✓</span>'
+          : `<button class="btn-hire btn-sm" onclick='openSend(${r.id}, ${JSON.stringify(r.title)})'>Send Proposal</button>`}
+      </div>
+    </div>`).join('');
+}
+
+async function loadProposals() {
+  const { proposals } = await api('/api/architect/proposals');
+  const list = document.getElementById('proposals-list');
+  if (!proposals.length) { list.innerHTML = '<p class="empty">You haven\'t sent any proposals yet.</p>'; return; }
+  list.innerHTML = proposals.map(p => `
+    <div class="list-card">
+      <div>
+        <div class="lc-type">${escapeHtml(p.project_type || 'Project')}</div>
+        <div class="lc-title">${escapeHtml(p.project_title)}</div>
+        <div class="lc-details">
+          <div class="lc-detail"><strong>${escapeHtml(p.quote || '—')}</strong>Quote</div>
+          <div class="lc-detail"><strong>${escapeHtml(p.package_name || '—')}</strong>Package</div>
+          <div class="lc-detail"><strong>${escapeHtml(p.timeline || '—')}</strong>Timeline</div>
+        </div>
+      </div>
+      <div class="lc-actions"><span class="status-badge status-${p.status}">${escapeHtml(p.status)}</span></div>
+    </div>`).join('');
+}
+
+async function loadProfile() {
+  const { profile, name } = await api('/api/architect/profile');
+  document.getElementById('studio-sub').textContent = (profile.studio || name) + ' · Architect Portal';
+  document.getElementById('profile-form').innerHTML = `
+    <div class="stat-card" style="padding:2rem">
+      <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;margin-bottom:1.4rem">Profile Information</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Studio Name</label><input id="pf-studio" value="${escapeHtml(profile.studio || '')}"></div>
+        <div class="form-group"><label>Title</label><input id="pf-title" value="${escapeHtml(profile.title || '')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Specialty</label><input id="pf-specialty" value="${escapeHtml(profile.specialty || '')}"></div>
+        <div class="form-group"><label>Location</label><input id="pf-location" value="${escapeHtml(profile.location || '')}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Experience</label><input id="pf-experience" value="${escapeHtml(profile.experience || '')}" placeholder="e.g. 10 yrs"></div>
+        <div class="form-group"><label>Starting Price</label><input id="pf-price" value="${escapeHtml(profile.price || '')}" placeholder="From $5,000"></div>
+      </div>
+      <div class="form-group"><label>Bio</label><textarea id="pf-bio">${escapeHtml(profile.bio || '')}</textarea></div>
+      <div class="form-group"><label>Tags (comma separated)</label><input id="pf-tags" value="${escapeHtml((profile.tags || []).join(', '))}"></div>
+      <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+    </div>`;
+}
+
+async function saveProfile() {
+  const body = {
+    studio: val('pf-studio'), title: val('pf-title'), specialty: val('pf-specialty'),
+    location: val('pf-location'), experience: val('pf-experience'), price: val('pf-price'),
+    bio: val('pf-bio'),
+    tags: val('pf-tags').split(',').map(t => t.trim()).filter(Boolean),
+    packages: []
+  };
+  // preserve existing packages
+  try {
+    const { profile } = await api('/api/architect/profile');
+    body.packages = profile.packages || [];
+  } catch (_) {}
+  try { await api('/api/architect/profile', { method: 'PUT', body }); toast('Profile updated.'); loadProfile(); }
+  catch (e) { toast(e.message, true); }
+}
+const val = id => document.getElementById(id).value;
+
+function openSend(projectId, title) {
+  document.getElementById('s-project').value = projectId;
+  document.getElementById('send-target').textContent = 'Project: ' + title;
+  document.getElementById('send-modal').classList.add('open');
+}
+function closeSend() { document.getElementById('send-modal').classList.remove('open'); }
+
+document.getElementById('send-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    project_id: Number(document.getElementById('s-project').value),
+    package_name: document.getElementById('s-package').value,
+    message: document.getElementById('s-message').value,
+    timeline: document.getElementById('s-timeline').value,
+    quote: document.getElementById('s-quote').value
+  };
+  try {
+    await api('/api/architect/proposals', { method: 'POST', body });
+    closeSend();
+    document.getElementById('send-form').reset();
+    toast('Proposal sent to client!');
+    await Promise.all([loadStats(), loadRequests(), loadProposals()]);
+  } catch (err) { toast(err.message, true); }
+});
+
+document.getElementById('send-modal').addEventListener('click', e => { if (e.target.id === 'send-modal') closeSend(); });
+
+document.querySelectorAll('.dash-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+init();
+</script>
+</body>
+</html>
