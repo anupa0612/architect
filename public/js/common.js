@@ -132,8 +132,24 @@ async function openMessages(orderId) {
   modal.classList.add('open');
 }
 
-// Renders the top nav based on auth state. Pass {active} to highlight.
-async function renderNav(opts = {}) {
+function closeMobileNav() {
+  document.querySelectorAll('.nav-links').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.nav-backdrop').forEach(el => el.classList.remove('open'));
+  document.body.style.overflow = '';
+}
+
+function toggleMobileNav() {
+  const links = document.querySelector('.nav-links');
+  const backdrop = document.querySelector('.nav-backdrop');
+  if (!links) return;
+  const open = !links.classList.contains('open');
+  links.classList.toggle('open', open);
+  if (backdrop) backdrop.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+
+// Renders the top nav based on auth state.
+async function renderNav() {
   const nav = document.getElementById('nav');
   if (!nav) return null;
   const user = await getCurrentUser();
@@ -150,10 +166,34 @@ async function renderNav(opts = {}) {
   }
   nav.innerHTML = `
     <a href="/" class="nav-logo">Arch<span>Hire</span></a>
+    <button type="button" class="nav-toggle" aria-label="Open menu" onclick="toggleMobileNav()">☰</button>
     <ul class="nav-links">
-      <li><a href="/#architects">Find Architects</a></li>
-      <li><a href="/#how">How It Works</a></li>
+      <li><a href="/#services" onclick="closeMobileNav()">Services</a></li>
+      <li><a href="/#how" onclick="closeMobileNav()">How It Works</a></li>
       ${right}
     </ul>`;
+  let backdrop = document.querySelector('.nav-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'nav-backdrop';
+    backdrop.onclick = closeMobileNav;
+    nav.parentNode.insertBefore(backdrop, nav.nextSibling);
+  }
   return user;
 }
+
+function renderFooter() {
+  if (document.getElementById('site-footer')) return;
+  const footer = document.createElement('footer');
+  footer.id = 'site-footer';
+  footer.className = 'site-footer';
+  footer.innerHTML = `
+    <div class="footer-inner">
+      <a href="/" class="nav-logo">Arch<span>Hire</span></a>
+      <p class="footer-tagline">The marketplace for architecture</p>
+      <p class="footer-credit">Developed by <strong>Anupa Wimalasiri</strong></p>
+    </div>`;
+  document.body.appendChild(footer);
+}
+
+document.addEventListener('DOMContentLoaded', renderFooter);
