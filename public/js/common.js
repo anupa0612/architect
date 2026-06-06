@@ -67,6 +67,71 @@ function toast(msg, isError = false) {
   _toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
 
+function money(n) {
+  const v = Number(n) || 0;
+  return '$' + v.toLocaleString('en-US');
+}
+
+function starHtml(rating, count) {
+  const r = Math.round(Number(rating) || 0);
+  const stars = '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r);
+  return `<span class="stars">${stars}${count != null ? ` <span class="count">(${count})</span>` : (rating ? ` <span class="count">${Number(rating).toFixed(1)}</span>` : '')}</span>`;
+}
+
+// Shared order message thread modal (used by customer + architect dashboards).
+function ensureMsgModal() {
+  let m = document.getElementById('msg-modal');
+  if (m) return m;
+  m = document.createElement('div');
+  m.id = 'msg-modal';
+  m.className = 'modal-overlay';
+  m.innerHTML = `<div class="modal"><div class="modal-pad" id="msg-modal-body"></div></div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', e => { if (e.target.id === 'msg-modal') m.classList.remove('open'); });
+  return m;
+}
+
+async function openMessages(orderId) {
+  const me = await getCurrentUser();
+  const modal = ensureMsgModal();
+  const body = document.getElementById('msg-modal-body');
+  async function paint() {
+    const { order, messages } = await api(`/api/orders/${orderId}/messages`);
+    const other = me.id === order.customer_id ? order.architect_name : order.customer_name;
+    body.innerHTML = `
+      <div class="modal-head">
+        <div>
+          <h3>Order #${order.id}</h3>
+          <div class="muted" style="font-size:0.8rem">${escapeHtml(order.title || '')} · with ${escapeHtml(other)}</div>
+        </div>
+        <button class="modal-x" onclick="document.getElementById('msg-modal').classList.remove('open')">✕</button>
+      </div>
+      <div class="thread" id="thread">${
+        messages.length ? messages.map(m => `
+          <div class="msg ${m.sender_id === me.id ? 'me' : 'them'}">
+            ${escapeHtml(m.body)}
+            <div class="meta">${escapeHtml(m.sender_name)} · ${timeAgo(m.created_at)}</div>
+          </div>`).join('') : '<p class="muted" style="text-align:center;padding:1rem">No messages yet. Say hello!</p>'
+      }</div>
+      <form class="msg-form" id="msg-form">
+        <input id="msg-input" placeholder="Type a message..." autocomplete="off" required>
+        <button class="btn-primary" type="submit">Send</button>
+      </form>`;
+    const thread = document.getElementById('thread');
+    thread.scrollTop = thread.scrollHeight;
+    document.getElementById('msg-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('msg-input');
+      const val = input.value.trim();
+      if (!val) return;
+      try { await api(`/api/orders/${orderId}/messages`, { method: 'POST', body: { body: val } }); input.value = ''; await paint(); }
+      catch (err) { toast(err.message, true); }
+    });
+  }
+  await paint();
+  modal.classList.add('open');
+}
+
 // Renders the top nav based on auth state. Pass {active} to highlight.
 async function renderNav(opts = {}) {
   const nav = document.getElementById('nav');

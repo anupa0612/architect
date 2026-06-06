@@ -97,20 +97,60 @@ function seed() {
     `INSERT INTO projects (customer_id, title, type, location, description, size, timeline, budget, style, status)
      VALUES (@customer_id,@title,@type,@location,@description,@size,@timeline,@budget,@style,@status)`
   );
+  const insertService = db.prepare(
+    `INSERT INTO services (architect_id, title, category, description, image, tags, packages, rating, reviews_count, orders_count)
+     VALUES (@architect_id,@title,@category,@description,@image,@tags,@packages,@rating,@reviews_count,@orders_count)`
+  );
+
+  // Build three-tier Fiverr-style packages from an architect's base packages.
+  function tieredPackages(a) {
+    const base = a.packages[0] || { features: ['Concept design', '2D plans'] };
+    const full = a.packages[1] || base;
+    const basePrice = parseInt(String(base.price).replace(/[^0-9]/g, '')) || 5000;
+    const fullPrice = parseInt(String(full.price).replace(/[^0-9]/g, '')) || basePrice * 3;
+    return [
+      { tier: 'Basic', name: base.name || 'Concept', price: basePrice, delivery_days: 14, revisions: 2, features: base.features.slice(0, 3) },
+      { tier: 'Standard', name: full.name || 'Design', price: Math.round((basePrice + fullPrice) / 2), delivery_days: 30, revisions: 4, features: (full.features || base.features).slice(0, 5) },
+      { tier: 'Premium', name: 'Full Service', price: fullPrice, delivery_days: 60, revisions: 99, features: full.features || base.features }
+    ];
+  }
+
+  const serviceTitleBySpecialty = {
+    Residential: 'I will design a stunning custom home or villa',
+    Commercial: 'I will design modern commercial & office spaces',
+    Landscape: 'I will create beautiful landscape & garden designs',
+    Interior: 'I will craft elegant interior architecture & FF&E',
+    Sustainable: 'I will deliver net-zero sustainable building design'
+  };
 
   const tx = db.transaction(() => {
     // Admin
     insertUser.run('Platform Admin', 'admin@archhire.test', hash('admin123'), 'admin');
 
-    // Architects
+    // Architects + their service listings (gigs)
+    const archIds = {};
     for (const a of architectsSeed) {
       const info = insertUser.run(a.name, a.email, hash('arch123'), 'architect');
+      const aid = info.lastInsertRowid;
+      archIds[a.email] = aid;
       insertProfile.run({
-        user_id: info.lastInsertRowid,
+        user_id: aid,
         studio: a.studio, title: a.title, specialty: a.specialty, location: a.location,
         experience: a.experience, bio: a.bio, rating: a.rating, projects: a.projects,
         price: a.price, badge: a.badge, img: a.img,
         tags: JSON.stringify(a.tags), packages: JSON.stringify(a.packages)
+      });
+      insertService.run({
+        architect_id: aid,
+        title: serviceTitleBySpecialty[a.specialty] || `I will design ${a.specialty.toLowerCase()} projects`,
+        category: a.specialty,
+        description: a.bio,
+        image: a.img,
+        tags: JSON.stringify(a.tags),
+        packages: JSON.stringify(tieredPackages(a)),
+        rating: a.rating,
+        reviews_count: Math.max(1, Math.round(a.projects / 8)),
+        orders_count: Math.round(a.projects / 4)
       });
     }
 
@@ -124,6 +164,26 @@ function seed() {
     ];
     for (const p of sampleProjects) {
       insertProject.run({ customer_id: cust.lastInsertRowid, ...p });
+    }
+
+    // A sample completed order + review (Fiverr-style) so dashboards aren't empty.
+    const elenaId = archIds['elena@archhire.test'];
+    const elenaService = db.prepare('SELECT id FROM services WHERE architect_id = ?').get(elenaId);
+    if (elenaService) {
+      const ord = db.prepare(`
+        INSERT INTO orders (service_id, customer_id, architect_id, title, package_tier, package_name, price, delivery_days, requirements, status, delivered_at, completed_at)
+        VALUES (?,?,?,?,?,?,?,?,?, 'completed', datetime('now','-5 days'), datetime('now','-3 days'))
+      `).run(elenaService.id, cust.lastInsertRowid, elenaId,
+        'Interior architecture for boutique hotel lobby', 'Standard', 'Full Interior', 16000, 30,
+        'Boutique hotel lobby, ~220 sqm, warm materiality, art-deco influence.');
+      db.prepare(`INSERT INTO messages (order_id, sender_id, body, created_at) VALUES (?,?,?,datetime('now','-4 days'))`)
+        .run(ord.lastInsertRowid, cust.lastInsertRowid, 'Hi Elena, excited to work together! Attaching our brand palette.');
+      db.prepare(`INSERT INTO messages (order_id, sender_id, body, created_at) VALUES (?,?,?,datetime('now','-3 days'))`)
+        .run(ord.lastInsertRowid, elenaId, 'Thank you! Delivered the first concept set — let me know your thoughts.');
+      db.prepare(`INSERT INTO reviews (order_id, service_id, customer_id, architect_id, rating, comment, created_at) VALUES (?,?,?,?,?,?,datetime('now','-2 days'))`)
+        .run(ord.lastInsertRowid, elenaService.id, cust.lastInsertRowid, elenaId, 5,
+          'Elena turned our lobby into a destination in itself. Flawless communication and delivery.');
+      db.prepare(`UPDATE services SET orders_count = orders_count + 1 WHERE id = ?`).run(elenaService.id);
     }
 
     db.prepare(`INSERT INTO activity_logs (user_id, role, action, detail) VALUES (NULL, 'system', 'seed', 'Initial database seed completed')`).run();

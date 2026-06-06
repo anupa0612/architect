@@ -29,6 +29,9 @@
   <div class="dash-tabs">
     <button class="dash-tab active" data-tab="overview">Overview</button>
     <button class="dash-tab" data-tab="users">Users</button>
+    <button class="dash-tab" data-tab="services">Services</button>
+    <button class="dash-tab" data-tab="orders">Orders</button>
+    <button class="dash-tab" data-tab="reviews">Reviews</button>
     <button class="dash-tab" data-tab="projects">Projects</button>
     <button class="dash-tab" data-tab="proposals">Proposals</button>
     <button class="dash-tab" data-tab="activity">Activity Monitor</button>
@@ -53,6 +56,30 @@
     <table class="data-table">
       <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Last Login</th><th>Actions</th></tr></thead>
       <tbody id="users-body"></tbody>
+    </table>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="dash-tab-content" id="tab-services">
+    <table class="data-table">
+      <thead><tr><th>Service</th><th>Architect</th><th>Category</th><th>Rating</th><th>Orders</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="services-body"></tbody>
+    </table>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="dash-tab-content" id="tab-orders">
+    <table class="data-table">
+      <thead><tr><th>Order</th><th>Client</th><th>Architect</th><th>Package</th><th>Price</th><th>Status</th><th>Placed</th></tr></thead>
+      <tbody id="orders-body"></tbody>
+    </table>
+  </div>
+
+  <!-- REVIEWS -->
+  <div class="dash-tab-content" id="tab-reviews">
+    <table class="data-table">
+      <thead><tr><th>Rating</th><th>Service</th><th>Client</th><th>Architect</th><th>Comment</th><th>When</th></tr></thead>
+      <tbody id="reviews-body"></tbody>
     </table>
   </div>
 
@@ -102,7 +129,53 @@ function startAuto() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadStats(), loadUsers(), loadProjects(), loadProposals(), loadActivity()]);
+  await Promise.all([loadStats(), loadUsers(), loadServices(), loadOrders(), loadReviews(), loadProjects(), loadProposals(), loadActivity()]);
+}
+
+async function loadServices() {
+  const { services } = await api('/api/admin/services');
+  document.getElementById('services-body').innerHTML = services.length ? services.map(s => `
+    <tr>
+      <td style="color:var(--ink)">${escapeHtml(s.title)}</td>
+      <td>${escapeHtml(s.architect_name)}</td>
+      <td>${escapeHtml(s.category || '—')}</td>
+      <td>${s.rating || 0} ★ (${s.reviews_count})</td>
+      <td>${s.orders_count}</td>
+      <td><span class="status-badge status-${s.active ? 'active' : 'closed'}">${s.active ? 'live' : 'hidden'}</span></td>
+      <td><button class="btn-hire btn-sm btn-danger" onclick="delService(${s.id})">Delete</button></td>
+    </tr>`).join('') : '<tr><td colspan="7" class="empty">No services.</td></tr>';
+}
+async function delService(id) {
+  if (!confirm('Delete this service?')) return;
+  try { await api(`/api/admin/services/${id}`, { method: 'DELETE' }); toast('Service deleted.'); refreshAll(); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function loadOrders() {
+  const { orders } = await api('/api/admin/orders');
+  document.getElementById('orders-body').innerHTML = orders.length ? orders.map(o => `
+    <tr>
+      <td style="color:var(--ink)">#${o.id} ${escapeHtml(o.title || '')}</td>
+      <td>${escapeHtml(o.customer_name)}</td>
+      <td>${escapeHtml(o.architect_name)}</td>
+      <td>${escapeHtml(o.package_tier || '—')}</td>
+      <td>${money(o.price)}</td>
+      <td><span class="status-badge status-${o.status}">${escapeHtml(o.status)}</span></td>
+      <td>${timeAgo(o.created_at)}</td>
+    </tr>`).join('') : '<tr><td colspan="7" class="empty">No orders.</td></tr>';
+}
+
+async function loadReviews() {
+  const { reviews } = await api('/api/admin/reviews');
+  document.getElementById('reviews-body').innerHTML = reviews.length ? reviews.map(r => `
+    <tr>
+      <td>${'★'.repeat(r.rating)}</td>
+      <td>${escapeHtml(r.service_title || '—')}</td>
+      <td>${escapeHtml(r.customer_name)}</td>
+      <td>${escapeHtml(r.architect_name)}</td>
+      <td style="max-width:320px;white-space:normal">${escapeHtml(r.comment || '')}</td>
+      <td>${timeAgo(r.created_at)}</td>
+    </tr>`).join('') : '<tr><td colspan="6" class="empty">No reviews.</td></tr>';
 }
 
 async function loadStats() {
@@ -113,10 +186,10 @@ async function loadStats() {
     <div class="stat-card"><div class="label">Architects</div><div class="value">${stats.architects}</div></div>
     <div class="stat-card"><div class="label">Suspended</div><div class="value" style="color:var(--error)">${stats.suspended}</div></div>`;
   document.getElementById('stat-grid-2').innerHTML = `
-    <div class="stat-card"><div class="label">Projects</div><div class="value">${stats.projects}</div></div>
-    <div class="stat-card"><div class="label">Proposals</div><div class="value">${stats.proposals}</div></div>
-    <div class="stat-card"><div class="label">Hires</div><div class="value gold">${stats.hiredProjects}</div></div>
-    <div class="stat-card"><div class="label">Actions Today</div><div class="value gold">${stats.actionsToday}</div></div>`;
+    <div class="stat-card"><div class="label">Services</div><div class="value">${stats.services}</div></div>
+    <div class="stat-card"><div class="label">Orders</div><div class="value">${stats.orders}</div></div>
+    <div class="stat-card"><div class="label">Revenue (completed)</div><div class="value gold">${money(stats.revenue)}</div></div>
+    <div class="stat-card"><div class="label">Avg Rating</div><div class="value gold">${stats.avgRating || '—'} ★</div></div>`;
   renderTrend(trend);
 }
 

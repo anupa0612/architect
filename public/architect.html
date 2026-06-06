@@ -15,66 +15,231 @@
       <div class="dash-welcome">Welcome back, <em style="font-style:italic" id="welcome-name">Architect</em></div>
       <p class="dash-sub" id="studio-sub">Architect Portal</p>
     </div>
+    <button class="btn-primary" onclick="openServiceModal()">+ Create a Service</button>
   </div>
 
   <div class="stat-grid" id="stat-grid"></div>
 
   <div class="dash-tabs">
-    <button class="dash-tab active" data-tab="requests">Open Requests</button>
+    <button class="dash-tab active" data-tab="orders">Orders</button>
+    <button class="dash-tab" data-tab="services">My Services</button>
+    <button class="dash-tab" data-tab="requests">Open Requests</button>
     <button class="dash-tab" data-tab="proposals">My Proposals</button>
-    <button class="dash-tab" data-tab="profile">My Profile</button>
+    <button class="dash-tab" data-tab="profile">Profile</button>
   </div>
 
-  <div class="dash-tab-content active" id="tab-requests"><div class="cards-list" id="requests-list"></div></div>
+  <div class="dash-tab-content active" id="tab-orders"><div class="cards-list" id="orders-list"></div></div>
+  <div class="dash-tab-content" id="tab-services"><div class="gig-grid" id="services-list"></div></div>
+  <div class="dash-tab-content" id="tab-requests"><div class="cards-list" id="requests-list"></div></div>
   <div class="dash-tab-content" id="tab-proposals"><div class="cards-list" id="proposals-list"></div></div>
   <div class="dash-tab-content" id="tab-profile"><div id="profile-form" style="max-width:680px"></div></div>
 </div>
 
+<!-- SERVICE EDITOR MODAL -->
+<div class="modal-overlay" id="service-modal">
+  <div class="modal wide"><div class="modal-pad">
+    <div class="modal-head"><h3 id="svc-modal-title">Create a Service</h3><button class="modal-x" onclick="closeService()">✕</button></div>
+    <form id="service-form">
+      <input type="hidden" id="svc-id">
+      <div class="form-row">
+        <div class="form-group"><label>Service Title</label><input id="svc-title" placeholder="I will design a modern villa..." required></div>
+        <div class="form-group"><label>Category</label><select id="svc-category"><option>Residential</option><option>Commercial</option><option>Interior</option><option>Landscape</option><option>Sustainable</option></select></div>
+      </div>
+      <div class="form-group"><label>Cover Image URL</label><input id="svc-image" placeholder="https://..."></div>
+      <div class="form-group"><label>Description</label><textarea id="svc-desc" placeholder="What clients get and why you're the right architect..."></textarea></div>
+      <div class="form-group"><label>Tags (comma separated)</label><input id="svc-tags" placeholder="villa, modern, sustainable"></div>
+      <h4 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin:1rem 0 0.6rem">Packages</h4>
+      <div id="tiers"></div>
+      <button class="btn-primary" type="submit" style="width:100%;margin-top:0.5rem">Save Service</button>
+    </form>
+  </div></div>
+</div>
+
+<!-- DELIVER MODAL -->
+<div class="modal-overlay" id="deliver-modal"><div class="modal"><div class="modal-pad" id="deliver-body"></div></div></div>
+
 <!-- SEND PROPOSAL MODAL -->
 <div class="modal-overlay" id="send-modal">
-  <div class="modal">
-    <div class="modal-pad">
-      <div class="modal-head"><h3>Send a Proposal</h3><button class="modal-x" onclick="closeSend()">✕</button></div>
-      <div id="send-target" class="muted" style="font-size:0.85rem;margin-bottom:1rem"></div>
-      <form id="send-form">
-        <input type="hidden" id="s-project">
-        <div class="form-group"><label>Package Name</label><input type="text" id="s-package" placeholder="e.g. Full Design Package"></div>
-        <div class="form-group"><label>Personalized Message</label><textarea id="s-message" placeholder="Why you're the right fit..."></textarea></div>
-        <div class="form-row">
-          <div class="form-group"><label>Proposed Timeline</label><input type="text" id="s-timeline" placeholder="e.g. 8 months"></div>
-          <div class="form-group"><label>Your Quote</label><input type="text" id="s-quote" placeholder="e.g. $28,000"></div>
-        </div>
-        <button class="btn-primary" type="submit" style="width:100%">Send Proposal ✦</button>
-      </form>
-    </div>
-  </div>
+  <div class="modal"><div class="modal-pad">
+    <div class="modal-head"><h3>Send a Proposal</h3><button class="modal-x" onclick="closeSend()">✕</button></div>
+    <div id="send-target" class="muted" style="font-size:0.85rem;margin-bottom:1rem"></div>
+    <form id="send-form">
+      <input type="hidden" id="s-project">
+      <div class="form-group"><label>Package Name</label><input id="s-package" placeholder="e.g. Full Design Package"></div>
+      <div class="form-group"><label>Message</label><textarea id="s-message" placeholder="Why you're the right fit..."></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Timeline</label><input id="s-timeline" placeholder="e.g. 8 months"></div>
+        <div class="form-group"><label>Quote</label><input id="s-quote" placeholder="e.g. $28,000"></div>
+      </div>
+      <button class="btn-primary" type="submit" style="width:100%">Send Proposal ✦</button>
+    </form>
+  </div></div>
 </div>
 
 <script src="/js/common.js"></script>
 <script>
 let ME;
+const TIERS = ['Basic', 'Standard', 'Premium'];
 
 async function init() {
   ME = await renderNav();
   if (!ME) return;
   document.getElementById('welcome-name').textContent = ME.name.split(' ')[0];
-  await Promise.all([loadStats(), loadRequests(), loadProposals(), loadProfile()]);
+  await Promise.all([loadStats(), loadOrders(), loadServices(), loadRequests(), loadProposals(), loadProfile()]);
 }
 
 async function loadStats() {
   const s = await api('/api/architect/stats');
   document.getElementById('stat-grid').innerHTML = `
-    <div class="stat-card"><div class="label">Open Requests</div><div class="value">${s.openRequests}</div></div>
-    <div class="stat-card"><div class="label">Proposals Sent</div><div class="value">${s.sent}</div></div>
-    <div class="stat-card"><div class="label">Accepted</div><div class="value gold">${s.accepted}</div></div>
-    <div class="stat-card"><div class="label">Hire Rate</div><div class="value gold">${s.hireRate}%</div></div>`;
+    <div class="stat-card"><div class="label">Active Orders</div><div class="value">${s.activeOrders}</div></div>
+    <div class="stat-card"><div class="label">Earnings</div><div class="value gold">${money(s.earnings)}</div></div>
+    <div class="stat-card"><div class="label">My Services</div><div class="value">${s.services}</div></div>
+    <div class="stat-card"><div class="label">Open Requests</div><div class="value">${s.openRequests}</div></div>`;
 }
 
+// ===== ORDERS =====
+async function loadOrders() {
+  const { orders } = await api('/api/architect/orders');
+  document.getElementById('orders-list').innerHTML = orders.length ? orders.map(o => `
+    <div class="list-card">
+      <div>
+        <div class="lc-type">${escapeHtml(o.package_name || '')} · ${escapeHtml(o.package_tier || '')}</div>
+        <div class="lc-title">${escapeHtml(o.title || 'Order')}</div>
+        <div class="lc-details">
+          <div class="lc-detail"><strong>${escapeHtml(o.customer_name)}</strong>Client</div>
+          <div class="lc-detail"><strong>${money(o.price)}</strong>Price</div>
+          <div class="lc-detail"><strong>${o.delivery_days} days</strong>Delivery</div>
+        </div>
+        ${o.requirements ? `<p class="muted" style="font-size:0.8rem;margin-top:0.5rem">Requirements: ${escapeHtml(o.requirements)}</p>` : ''}
+      </div>
+      <div class="lc-actions">
+        <span class="status-badge status-${o.status}">${escapeHtml(o.status)}</span>
+        <button class="btn-hire btn-sm" onclick="openMessages(${o.id})">Message${o.message_count ? ' (' + o.message_count + ')' : ''}</button>
+        ${o.status === 'active' ? `<button class="btn-hire btn-sm" onclick="openDeliver(${o.id})">Deliver</button>` : ''}
+      </div>
+    </div>`).join('') : '<p class="empty">No orders yet. Create a service so clients can hire you.</p>';
+}
+
+function openDeliver(id) {
+  document.getElementById('deliver-body').innerHTML = `
+    <div class="modal-head"><h3>Deliver Order #${id}</h3><button class="modal-x" onclick="document.getElementById('deliver-modal').classList.remove('open')">✕</button></div>
+    <div class="form-group"><label>Delivery Note</label><textarea id="dl-note" placeholder="Summarize the deliverables, links, next steps..."></textarea></div>
+    <button class="btn-primary" style="width:100%" onclick="deliver(${id})">Mark as Delivered</button>`;
+  document.getElementById('deliver-modal').classList.add('open');
+}
+async function deliver(id) {
+  try { await api(`/api/architect/orders/${id}/deliver`, { method: 'POST', body: { note: document.getElementById('dl-note').value } }); document.getElementById('deliver-modal').classList.remove('open'); toast('Order delivered!'); loadOrders(); loadStats(); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ===== SERVICES =====
+async function loadServices() {
+  const { services } = await api('/api/architect/services');
+  document.getElementById('services-list').innerHTML = services.length ? services.map(s => {
+    const from = (s.packages[0] && s.packages[0].price) || 0;
+    return `
+    <div class="gig-card">
+      <div class="gig-thumb"><img src="${escapeHtml(s.image)}" alt=""></div>
+      <div class="gig-body">
+        <div class="gig-cat">${escapeHtml(s.category)} ${s.active ? '' : '· (hidden)'}</div>
+        <div class="gig-title">${escapeHtml(s.title)}</div>
+        <div class="gig-foot">
+          ${starHtml(s.rating, s.reviews_count)}
+          <div class="gig-price" style="text-align:right">From <strong>${money(from)}</strong></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.8rem">
+          <button class="btn-hire btn-sm" onclick='editService(${s.id})'>Edit</button>
+          <button class="btn-hire btn-sm btn-danger" onclick="deleteService(${s.id})">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : '<p class="empty">No services yet. Click “Create a Service”.</p>';
+  window._myServices = services;
+}
+
+function tierInputsHtml(pkgs) {
+  return TIERS.map((tier, i) => {
+    const p = pkgs[i] || {};
+    return `
+    <div class="package-card">
+      <div class="pkg-header"><div class="pkg-name">${tier}</div></div>
+      <div class="form-row">
+        <div class="form-group"><label>Package Name</label><input class="tk-name" value="${escapeHtml(p.name || '')}" placeholder="${tier} package"></div>
+        <div class="form-group"><label>Price ($)</label><input class="tk-price" type="number" value="${p.price || ''}" placeholder="5000"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Delivery (days)</label><input class="tk-days" type="number" value="${p.delivery_days || ''}" placeholder="14"></div>
+        <div class="form-group"><label>Revisions</label><input class="tk-rev" type="number" value="${p.revisions || ''}" placeholder="2"></div>
+      </div>
+      <div class="form-group"><label>Features (one per line)</label><textarea class="tk-feat" placeholder="Site analysis&#10;2D plans&#10;3D renders">${(p.features || []).join('\n')}</textarea></div>
+    </div>`;
+  }).join('');
+}
+
+function openServiceModal() {
+  document.getElementById('svc-modal-title').textContent = 'Create a Service';
+  document.getElementById('svc-id').value = '';
+  document.getElementById('svc-title').value = '';
+  document.getElementById('svc-image').value = '';
+  document.getElementById('svc-desc').value = '';
+  document.getElementById('svc-tags').value = '';
+  document.getElementById('svc-category').value = 'Residential';
+  document.getElementById('tiers').innerHTML = tierInputsHtml([]);
+  document.getElementById('service-modal').classList.add('open');
+}
+function editService(id) {
+  const s = (window._myServices || []).find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('svc-modal-title').textContent = 'Edit Service';
+  document.getElementById('svc-id').value = s.id;
+  document.getElementById('svc-title').value = s.title;
+  document.getElementById('svc-image').value = s.image;
+  document.getElementById('svc-desc').value = s.description;
+  document.getElementById('svc-tags').value = (s.tags || []).join(', ');
+  document.getElementById('svc-category').value = s.category;
+  document.getElementById('tiers').innerHTML = tierInputsHtml(s.packages || []);
+  document.getElementById('service-modal').classList.add('open');
+}
+function closeService() { document.getElementById('service-modal').classList.remove('open'); }
+async function deleteService(id) {
+  if (!confirm('Delete this service?')) return;
+  try { await api(`/api/architect/services/${id}`, { method: 'DELETE' }); toast('Service deleted.'); loadServices(); loadStats(); }
+  catch (e) { toast(e.message, true); }
+}
+
+document.getElementById('service-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const names = [...document.querySelectorAll('.tk-name')].map(x => x.value);
+  const prices = [...document.querySelectorAll('.tk-price')].map(x => x.value);
+  const days = [...document.querySelectorAll('.tk-days')].map(x => x.value);
+  const revs = [...document.querySelectorAll('.tk-rev')].map(x => x.value);
+  const feats = [...document.querySelectorAll('.tk-feat')].map(x => x.value);
+  const packages = TIERS.map((tier, i) => ({
+    tier, name: names[i] || tier, price: Number(prices[i]) || 0,
+    delivery_days: Number(days[i]) || 0, revisions: Number(revs[i]) || 0,
+    features: feats[i].split('\n').map(f => f.trim()).filter(Boolean)
+  })).filter(p => p.price > 0);
+
+  const body = {
+    title: document.getElementById('svc-title').value,
+    category: document.getElementById('svc-category').value,
+    image: document.getElementById('svc-image').value,
+    description: document.getElementById('svc-desc').value,
+    tags: document.getElementById('svc-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    packages
+  };
+  const id = document.getElementById('svc-id').value;
+  try {
+    if (id) await api('/api/architect/services/' + id, { method: 'PUT', body });
+    else await api('/api/architect/services', { method: 'POST', body });
+    closeService(); toast('Service saved!'); loadServices(); loadStats();
+  } catch (err) { toast(err.message, true); }
+});
+
+// ===== REQUESTS / PROPOSALS =====
 async function loadRequests() {
   const { requests } = await api('/api/architect/requests');
-  const list = document.getElementById('requests-list');
-  if (!requests.length) { list.innerHTML = '<p class="empty">No open requests right now. Check back soon.</p>'; return; }
-  list.innerHTML = requests.map(r => `
+  document.getElementById('requests-list').innerHTML = requests.length ? requests.map(r => `
     <div class="list-card">
       <div>
         <div class="lc-type">${escapeHtml(r.type || 'Project')}</div>
@@ -82,38 +247,43 @@ async function loadRequests() {
         <p class="muted" style="font-size:0.82rem;margin:0.3rem 0">${escapeHtml(r.description || '')}</p>
         <div class="lc-details">
           <div class="lc-detail"><strong>${escapeHtml(r.budget || '—')}</strong>Budget</div>
-          <div class="lc-detail"><strong>${escapeHtml(r.size || '—')}</strong>Size</div>
           <div class="lc-detail"><strong>${escapeHtml(r.timeline || '—')}</strong>Timeline</div>
           <div class="lc-detail"><strong>${escapeHtml(r.style || '—')}</strong>Style</div>
         </div>
       </div>
       <div class="lc-actions">
         <span class="status-badge status-${r.status}">${escapeHtml(r.status)}</span>
-        ${r.mine ? '<span class="muted" style="font-size:0.75rem">Proposal sent ✓</span>'
-          : `<button class="btn-hire btn-sm" onclick='openSend(${r.id}, ${JSON.stringify(r.title)})'>Send Proposal</button>`}
+        ${r.mine ? '<span class="muted" style="font-size:0.75rem">Proposal sent ✓</span>' : `<button class="btn-hire btn-sm" onclick='openSend(${r.id}, ${JSON.stringify(r.title)})'>Send Proposal</button>`}
       </div>
-    </div>`).join('');
+    </div>`).join('') : '<p class="empty">No open requests right now.</p>';
 }
-
 async function loadProposals() {
   const { proposals } = await api('/api/architect/proposals');
-  const list = document.getElementById('proposals-list');
-  if (!proposals.length) { list.innerHTML = '<p class="empty">You haven\'t sent any proposals yet.</p>'; return; }
-  list.innerHTML = proposals.map(p => `
+  document.getElementById('proposals-list').innerHTML = proposals.length ? proposals.map(p => `
     <div class="list-card">
-      <div>
-        <div class="lc-type">${escapeHtml(p.project_type || 'Project')}</div>
-        <div class="lc-title">${escapeHtml(p.project_title)}</div>
+      <div><div class="lc-type">${escapeHtml(p.project_type || 'Project')}</div><div class="lc-title">${escapeHtml(p.project_title)}</div>
         <div class="lc-details">
           <div class="lc-detail"><strong>${escapeHtml(p.quote || '—')}</strong>Quote</div>
           <div class="lc-detail"><strong>${escapeHtml(p.package_name || '—')}</strong>Package</div>
-          <div class="lc-detail"><strong>${escapeHtml(p.timeline || '—')}</strong>Timeline</div>
-        </div>
-      </div>
+        </div></div>
       <div class="lc-actions"><span class="status-badge status-${p.status}">${escapeHtml(p.status)}</span></div>
-    </div>`).join('');
+    </div>`).join('') : '<p class="empty">No proposals sent yet.</p>';
 }
 
+function openSend(projectId, title) {
+  document.getElementById('s-project').value = projectId;
+  document.getElementById('send-target').textContent = 'Project: ' + title;
+  document.getElementById('send-modal').classList.add('open');
+}
+function closeSend() { document.getElementById('send-modal').classList.remove('open'); }
+document.getElementById('send-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = { project_id: Number(document.getElementById('s-project').value), package_name: document.getElementById('s-package').value, message: document.getElementById('s-message').value, timeline: document.getElementById('s-timeline').value, quote: document.getElementById('s-quote').value };
+  try { await api('/api/architect/proposals', { method: 'POST', body }); closeSend(); e.target.reset(); toast('Proposal sent!'); loadRequests(); loadProposals(); loadStats(); }
+  catch (err) { toast(err.message, true); }
+});
+
+// ===== PROFILE =====
 async function loadProfile() {
   const { profile, name } = await api('/api/architect/profile');
   document.getElementById('studio-sub').textContent = (profile.studio || name) + ' · Architect Portal';
@@ -130,67 +300,30 @@ async function loadProfile() {
       </div>
       <div class="form-row">
         <div class="form-group"><label>Experience</label><input id="pf-experience" value="${escapeHtml(profile.experience || '')}" placeholder="e.g. 10 yrs"></div>
-        <div class="form-group"><label>Starting Price</label><input id="pf-price" value="${escapeHtml(profile.price || '')}" placeholder="From $5,000"></div>
+        <div class="form-group"><label>Starting Price</label><input id="pf-price" value="${escapeHtml(profile.price || '')}"></div>
       </div>
       <div class="form-group"><label>Bio</label><textarea id="pf-bio">${escapeHtml(profile.bio || '')}</textarea></div>
       <div class="form-group"><label>Tags (comma separated)</label><input id="pf-tags" value="${escapeHtml((profile.tags || []).join(', '))}"></div>
       <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
     </div>`;
-}
-
-async function saveProfile() {
-  const body = {
-    studio: val('pf-studio'), title: val('pf-title'), specialty: val('pf-specialty'),
-    location: val('pf-location'), experience: val('pf-experience'), price: val('pf-price'),
-    bio: val('pf-bio'),
-    tags: val('pf-tags').split(',').map(t => t.trim()).filter(Boolean),
-    packages: []
-  };
-  // preserve existing packages
-  try {
-    const { profile } = await api('/api/architect/profile');
-    body.packages = profile.packages || [];
-  } catch (_) {}
-  try { await api('/api/architect/profile', { method: 'PUT', body }); toast('Profile updated.'); loadProfile(); }
-  catch (e) { toast(e.message, true); }
+  window._profilePackages = profile.packages || [];
 }
 const val = id => document.getElementById(id).value;
-
-function openSend(projectId, title) {
-  document.getElementById('s-project').value = projectId;
-  document.getElementById('send-target').textContent = 'Project: ' + title;
-  document.getElementById('send-modal').classList.add('open');
+async function saveProfile() {
+  const body = { studio: val('pf-studio'), title: val('pf-title'), specialty: val('pf-specialty'), location: val('pf-location'), experience: val('pf-experience'), price: val('pf-price'), bio: val('pf-bio'), tags: val('pf-tags').split(',').map(t => t.trim()).filter(Boolean), packages: window._profilePackages || [] };
+  try { await api('/api/architect/profile', { method: 'PUT', body }); toast('Profile updated.'); }
+  catch (e) { toast(e.message, true); }
 }
-function closeSend() { document.getElementById('send-modal').classList.remove('open'); }
 
-document.getElementById('send-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const body = {
-    project_id: Number(document.getElementById('s-project').value),
-    package_name: document.getElementById('s-package').value,
-    message: document.getElementById('s-message').value,
-    timeline: document.getElementById('s-timeline').value,
-    quote: document.getElementById('s-quote').value
-  };
-  try {
-    await api('/api/architect/proposals', { method: 'POST', body });
-    closeSend();
-    document.getElementById('send-form').reset();
-    toast('Proposal sent to client!');
-    await Promise.all([loadStats(), loadRequests(), loadProposals()]);
-  } catch (err) { toast(err.message, true); }
-});
-
-document.getElementById('send-modal').addEventListener('click', e => { if (e.target.id === 'send-modal') closeSend(); });
-
-document.querySelectorAll('.dash-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-  });
-});
+// modal backdrops + tabs
+['service-modal','deliver-modal','send-modal'].forEach(id =>
+  document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) document.getElementById(id).classList.remove('open'); }));
+document.querySelectorAll('.dash-tab').forEach(tab => tab.addEventListener('click', () => {
+  document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+}));
 
 init();
 </script>

@@ -23,6 +23,14 @@ router.get('/stats', (req, res) => {
     hiredProjects: db.prepare(`SELECT COUNT(*) AS n FROM projects WHERE status='hired'`).get().n,
     proposals: db.prepare('SELECT COUNT(*) AS n FROM proposals').get().n,
     acceptedProposals: db.prepare(`SELECT COUNT(*) AS n FROM proposals WHERE status='accepted'`).get().n,
+    services: db.prepare('SELECT COUNT(*) AS n FROM services').get().n,
+    orders: db.prepare('SELECT COUNT(*) AS n FROM orders').get().n,
+    activeOrders: db.prepare(`SELECT COUNT(*) AS n FROM orders WHERE status IN ('active','delivered')`).get().n,
+    completedOrders: db.prepare(`SELECT COUNT(*) AS n FROM orders WHERE status='completed'`).get().n,
+    revenue: db.prepare(`SELECT COALESCE(SUM(price),0) AS s FROM orders WHERE status='completed'`).get().s,
+    gmv: db.prepare(`SELECT COALESCE(SUM(price),0) AS s FROM orders WHERE status IN ('active','delivered','completed')`).get().s,
+    reviews: db.prepare('SELECT COUNT(*) AS n FROM reviews').get().n,
+    avgRating: Math.round((db.prepare('SELECT AVG(rating) AS a FROM reviews').get().a || 0) * 10) / 10,
     actionsToday: db.prepare(`SELECT COUNT(*) AS n FROM activity_logs WHERE date(created_at)=date('now')`).get().n,
     actionsTotal: db.prepare('SELECT COUNT(*) AS n FROM activity_logs').get().n
   };
@@ -102,6 +110,51 @@ router.get('/proposals', (req, res) => {
     ORDER BY pr.created_at DESC
   `).all();
   res.json({ proposals });
+});
+
+// All services (gigs).
+router.get('/services', (req, res) => {
+  const services = db.prepare(`
+    SELECT s.id, s.title, s.category, s.rating, s.reviews_count, s.orders_count, s.active, s.created_at,
+           u.name AS architect_name
+    FROM services s JOIN users u ON u.id = s.architect_id
+    ORDER BY s.created_at DESC
+  `).all();
+  res.json({ services });
+});
+
+router.delete('/services/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const s = db.prepare('SELECT * FROM services WHERE id = ?').get(id);
+  if (!s) return res.status(404).json({ error: 'Service not found' });
+  db.prepare('DELETE FROM services WHERE id = ?').run(id);
+  log(req, 'service_deleted', `${s.title} (#${id})`);
+  res.json({ ok: true });
+});
+
+// All orders.
+router.get('/orders', (req, res) => {
+  const orders = db.prepare(`
+    SELECT o.*, uc.name AS customer_name, ua.name AS architect_name
+    FROM orders o
+    JOIN users uc ON uc.id = o.customer_id
+    JOIN users ua ON ua.id = o.architect_id
+    ORDER BY o.created_at DESC
+  `).all();
+  res.json({ orders });
+});
+
+// All reviews.
+router.get('/reviews', (req, res) => {
+  const reviews = db.prepare(`
+    SELECT r.*, uc.name AS customer_name, ua.name AS architect_name, s.title AS service_title
+    FROM reviews r
+    JOIN users uc ON uc.id = r.customer_id
+    JOIN users ua ON ua.id = r.architect_id
+    LEFT JOIN services s ON s.id = r.service_id
+    ORDER BY r.created_at DESC
+  `).all();
+  res.json({ reviews });
 });
 
 // Activity log feed — monitor full webpage actions.

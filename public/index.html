@@ -3,172 +3,195 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ArchHire — Find Your Architect</title>
+<title>ArchHire — The Marketplace for Architecture</title>
 <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
 
 <nav id="nav"></nav>
 
-<section class="hero">
-  <div class="hero-left">
-    <div class="hero-tag">Connecting Vision &amp; Craft</div>
-    <h1>Find the <em>Perfect</em><br>Architect for<br>Your Dream</h1>
-    <p class="hero-desc">ArchHire connects you with award-winning architects worldwide. Describe your vision, receive tailored proposals, and build something extraordinary.</p>
-    <div class="hero-btns">
-      <a class="btn-primary" href="/register.html">Start Your Project</a>
-      <a class="btn-secondary" href="#architects">Browse Architects</a>
-    </div>
-    <div class="hero-stats" id="hero-stats">
-      <div><div class="stat-num" id="stat-arch">—</div><div class="stat-label">Architects</div></div>
-      <div><div class="stat-num" id="stat-proj">—</div><div class="stat-label">Projects</div></div>
-      <div><div class="stat-num" id="stat-country">—</div><div class="stat-label">Countries</div></div>
-    </div>
+<section class="search-hero">
+  <h1>Hire the world's best <em>architects</em></h1>
+  <p>Browse ready-to-order design services, or post a project and receive proposals.</p>
+  <div class="search-box">
+    <input id="search-input" placeholder="Search: villa design, office fit-out, landscape..." onkeydown="if(event.key==='Enter')doSearch()">
+    <button onclick="doSearch()">Search</button>
   </div>
-  <div class="hero-right">
-    <div class="hero-img-grid">
-      <div class="hero-img-cell">
-        <img src="https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=600&q=80" alt="Modern architecture">
-        <div class="hero-overlay"><strong>Villa Meridian</strong><p>by Studio Carvalho · Lagos, Portugal</p></div>
-      </div>
-      <div class="hero-img-cell"><img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80" alt="Luxury home"></div>
-      <div class="hero-img-cell"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=80" alt="Interior design"></div>
-    </div>
+  <div class="search-tags">
+    Popular:
+    <a href="#" onclick="quickSearch('villa');return false">Villa Design</a>·
+    <a href="#" onclick="quickSearch('office');return false">Office Spaces</a>·
+    <a href="#" onclick="quickSearch('landscape');return false">Landscape</a>·
+    <a href="#" onclick="quickSearch('sustainable');return false">Sustainable</a>
   </div>
 </section>
 
-<section class="section" id="architects">
-  <div class="section-header">
-    <div class="section-tag">Our Talent</div>
-    <h2>Featured Architects</h2>
-    <p class="section-sub">Curated professionals across residential, commercial, landscape and interior design.</p>
+<section class="section" id="services">
+  <div class="section-header" style="margin-bottom:2rem">
+    <div class="section-tag">The Marketplace</div>
+    <h2>Architecture Services</h2>
+    <p class="section-sub">Fixed-scope design packages you can order in minutes.</p>
   </div>
-  <div class="filter-bar" id="filter-bar"></div>
-  <div class="architects-grid" id="arch-grid"></div>
+  <div class="cat-chips" id="cat-chips"></div>
+  <div class="gig-grid" id="gig-grid"></div>
 </section>
 
 <section class="how-section" id="how">
   <div class="section-header">
     <div class="section-tag">The Process</div>
     <h2>How ArchHire Works</h2>
-    <p class="section-sub" style="color:rgba(250,248,244,0.55)">A seamless journey from concept to completion, guided every step of the way.</p>
+    <p class="section-sub" style="color:rgba(250,248,244,0.55)">Two ways to work — order a service, or post a project for proposals.</p>
   </div>
   <div class="steps-grid">
-    <div class="step"><div class="step-num">01</div><div class="step-icon">✦</div><h3>Describe Your Vision</h3><p>Create a customer account and post a project brief — type, budget, style and timeline.</p></div>
-    <div class="step"><div class="step-num">02</div><div class="step-icon">◎</div><h3>Architects Review</h3><p>Architects browse open briefs that match their expertise and decide to respond.</p></div>
-    <div class="step"><div class="step-num">03</div><div class="step-icon">◈</div><h3>Receive Proposals</h3><p>Qualified architects send packages — timelines, deliverables and pricing tailored to you.</p></div>
-    <div class="step"><div class="step-num">04</div><div class="step-icon">❋</div><h3>Choose &amp; Build</h3><p>Compare proposals in your dashboard, accept the best fit, and start building.</p></div>
+    <div class="step"><div class="step-num">01</div><div class="step-icon">✦</div><h3>Find or Post</h3><p>Browse architects' service packages, or post a project brief for the Upwork-style proposal flow.</p></div>
+    <div class="step"><div class="step-num">02</div><div class="step-icon">◎</div><h3>Order or Review</h3><p>Order a package directly, or compare incoming proposals from interested architects.</p></div>
+    <div class="step"><div class="step-num">03</div><div class="step-icon">◈</div><h3>Collaborate</h3><p>Share requirements and chat with your architect in the order workspace until delivery.</p></div>
+    <div class="step"><div class="step-num">04</div><div class="step-icon">❋</div><h3>Approve &amp; Review</h3><p>Approve the delivery, mark it complete, and leave a review to build their reputation.</p></div>
   </div>
 </section>
 
 <section class="section" style="background:var(--cream-dark);text-align:center">
   <div class="section-header" style="margin-bottom:2rem">
-    <div class="section-tag">Get Started</div>
-    <h2>Ready to begin?</h2>
-    <p class="section-sub">Join as a client to post your project, or as an architect to win new work.</p>
+    <div class="section-tag">For Architects</div>
+    <h2>Grow your studio</h2>
+    <p class="section-sub">List your services, win projects, and manage orders — all in one place.</p>
   </div>
   <div class="hero-btns" style="justify-content:center">
-    <a class="btn-primary" href="/register.html">Create an Account</a>
+    <a class="btn-primary" href="/register.html">Become a Seller</a>
     <a class="btn-secondary" href="/login.html">Log In</a>
   </div>
 </section>
 
-<!-- ARCHITECT MODAL -->
-<div class="modal-overlay" id="arch-modal">
-  <div class="modal wide" id="modal-content"></div>
+<!-- SERVICE DETAIL MODAL -->
+<div class="modal-overlay" id="svc-modal">
+  <div class="modal wide" id="svc-content"></div>
 </div>
 
 <script src="/js/common.js"></script>
 <script>
-let ARCHITECTS = [];
+let ME, CATEGORY = 'All', SEARCH = '';
+
+async function init() {
+  ME = await renderNav();
+  loadStats();
+  await loadCategories();
+  await loadServices();
+}
 
 async function loadStats() {
   try {
     const s = await api('/api/public/stats');
-    document.getElementById('stat-arch').textContent = s.architects + '+';
-    document.getElementById('stat-proj').textContent = s.projects + '+';
-    document.getElementById('stat-country').textContent = s.countries;
+    // reflected subtly in hero copy if desired; kept minimal here
   } catch (_) {}
 }
 
-async function loadArchitects() {
-  const { architects } = await api('/api/public/architects');
-  ARCHITECTS = architects;
-  const specialties = ['All', ...new Set(architects.map(a => a.specialty).filter(Boolean))];
-  document.getElementById('filter-bar').innerHTML = specialties.map((s, i) =>
-    `<button class="filter-btn ${i === 0 ? 'active' : ''}" data-spec="${escapeHtml(s)}">${escapeHtml(s)}</button>`
+async function loadCategories() {
+  const { categories } = await api('/api/public/categories');
+  const chips = [{ category: 'All' }, ...categories];
+  document.getElementById('cat-chips').innerHTML = chips.map(c =>
+    `<button class="cat-chip ${c.category === CATEGORY ? 'active' : ''}" onclick="setCategory('${escapeHtml(c.category)}')">${escapeHtml(c.category)}${c.n ? ` (${c.n})` : ''}</button>`
   ).join('');
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      render(btn.dataset.spec);
-    });
-  });
-  render('All');
 }
 
-function render(filter) {
-  const list = filter === 'All' ? ARCHITECTS : ARCHITECTS.filter(a => a.specialty === filter);
-  const grid = document.getElementById('arch-grid');
-  if (!list.length) { grid.innerHTML = '<p class="empty">No architects in this category yet.</p>'; return; }
-  grid.innerHTML = list.map(a => `
-    <div class="arch-card" onclick="openModal(${a.id})">
-      <div class="arch-card-img">
-        <img src="${escapeHtml(a.img)}" alt="${escapeHtml(a.name)}" loading="lazy">
-        <span class="arch-badge">${escapeHtml(a.badge || 'New')}</span>
-      </div>
-      <div class="arch-card-body">
-        <div class="arch-name">${escapeHtml(a.name)}</div>
-        <div class="arch-title">${escapeHtml(a.title || '')}</div>
-        <div class="arch-meta">
-          <div class="arch-meta-item"><strong>${escapeHtml(a.experience || '—')}</strong>Experience</div>
-          <div class="arch-meta-item"><strong>${a.projects} proj</strong>Completed</div>
-          <div class="arch-meta-item"><strong>★ ${a.rating}</strong>Rating</div>
+function setCategory(cat) {
+  CATEGORY = cat;
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.toggle('active', c.textContent.startsWith(cat)));
+  loadServices();
+}
+function doSearch() { SEARCH = document.getElementById('search-input').value.trim(); loadServices(); document.getElementById('services').scrollIntoView({ behavior: 'smooth' }); }
+function quickSearch(q) { document.getElementById('search-input').value = q; doSearch(); }
+
+async function loadServices() {
+  const params = new URLSearchParams();
+  if (SEARCH) params.set('search', SEARCH);
+  if (CATEGORY && CATEGORY !== 'All') params.set('category', CATEGORY);
+  const { services } = await api('/api/public/services?' + params.toString());
+  const grid = document.getElementById('gig-grid');
+  if (!services.length) { grid.innerHTML = '<p class="empty">No services found. Try another search.</p>'; return; }
+  grid.innerHTML = services.map(s => {
+    const from = (s.packages[0] && s.packages[0].price) || 0;
+    return `
+    <div class="gig-card" onclick="openService(${s.id})">
+      <div class="gig-thumb"><img src="${escapeHtml(s.image)}" alt="" loading="lazy"></div>
+      <div class="gig-body">
+        <div class="gig-seller">
+          <img src="${escapeHtml(s.architect_img || '')}" alt=""><span>${escapeHtml(s.architect_name)}</span>
         </div>
-        <div class="arch-tags">${(a.tags || []).map(t => `<span class="arch-tag">${escapeHtml(t)}</span>`).join('')}</div>
-        <div class="arch-card-footer">
-          <div class="arch-price">${escapeHtml(a.price || '')} <span>/ project</span></div>
-          <button class="btn-hire" onclick="event.stopPropagation();openModal(${a.id})">View Profile</button>
+        <div class="gig-cat">${escapeHtml(s.category)}</div>
+        <div class="gig-title">${escapeHtml(s.title)}</div>
+        <div class="gig-foot">
+          ${starHtml(s.rating, s.reviews_count)}
+          <div class="gig-price" style="text-align:right">From <strong>${money(from)}</strong></div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
-function openModal(id) {
-  const a = ARCHITECTS.find(x => x.id === id);
-  if (!a) return;
-  document.getElementById('modal-content').innerHTML = `
-    <div style="position:relative;height:260px;overflow:hidden">
-      <img src="${escapeHtml(a.img)}" style="width:100%;height:100%;object-fit:cover">
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(26,24,20,0.85),transparent 55%);display:flex;align-items:flex-end;padding:2rem">
-        <div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:2.2rem;color:var(--cream)">${escapeHtml(a.name)}</div>
-          <div style="font-size:0.8rem;color:var(--gold);text-transform:uppercase;letter-spacing:0.1em">${escapeHtml(a.title || '')} · ${escapeHtml(a.location || '')}</div>
-        </div>
-      </div>
-      <button class="modal-x" style="position:absolute;top:1rem;right:1rem;color:var(--cream)" onclick="closeModal()">✕</button>
+async function openService(id) {
+  const { service, reviews } = await api('/api/public/services/' + id);
+  const c = document.getElementById('svc-content');
+  const pkgs = service.packages || [];
+  c.innerHTML = `
+    <div style="position:relative;height:240px;overflow:hidden">
+      <img src="${escapeHtml(service.image)}" style="width:100%;height:100%;object-fit:cover">
+      <button class="modal-x" style="position:absolute;top:1rem;right:1rem;color:var(--cream)" onclick="closeSvc()">✕</button>
     </div>
     <div class="modal-pad">
-      <p class="muted" style="line-height:1.8;margin-bottom:1.5rem">${escapeHtml(a.bio || '')}</p>
-      <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-light);margin-bottom:1rem">Available Packages</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-        ${(a.packages || []).map(p => `
-          <div class="package-card ${p.featured ? 'featured' : ''}">
-            <div class="pkg-header"><div class="pkg-name">${escapeHtml(p.name)}</div><div class="pkg-price">${escapeHtml(p.price)}</div></div>
-            <ul class="pkg-features">${(p.features || []).map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
-          </div>`).join('') || '<p class="muted">No packages listed yet.</p>'}
+      <div class="gig-cat">${escapeHtml(service.category)}</div>
+      <h3 style="font-size:1.5rem;margin-bottom:0.6rem">${escapeHtml(service.title)}</h3>
+      <div class="gig-seller" style="margin-bottom:1rem">
+        <img src="${escapeHtml(service.architect_img || '')}" alt="">
+        <span>${escapeHtml(service.architect_name)} · ${escapeHtml(service.location || '')}</span>
+        ${starHtml(service.rating, service.reviews_count)}
       </div>
-      <a class="btn-primary" style="width:100%;text-align:center;margin-top:1.5rem" href="/register.html">Sign up to hire ${escapeHtml(a.name.split(' ')[0])} ✦</a>
-    </div>`;
-  document.getElementById('arch-modal').classList.add('open');
-}
-function closeModal() { document.getElementById('arch-modal').classList.remove('open'); }
-document.getElementById('arch-modal').addEventListener('click', e => { if (e.target.id === 'arch-modal') closeModal(); });
+      <p class="muted" style="line-height:1.8;margin-bottom:1.5rem">${escapeHtml(service.description || '')}</p>
 
-renderNav();
-loadStats();
-loadArchitects();
+      ${pkgs.length ? `
+        <div class="tier-tabs" id="tier-tabs">
+          ${pkgs.map((p, i) => `<button class="tier-tab ${i === 0 ? 'active' : ''}" onclick="showTier(${i})">${escapeHtml(p.tier)}</button>`).join('')}
+        </div>
+        ${pkgs.map((p, i) => `
+          <div class="tier-panel ${i === 0 ? 'active' : ''}" id="tier-${i}">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem">
+              <div class="pkg-name">${escapeHtml(p.name)}</div>
+              <div class="pkg-price" style="font-size:1.4rem">${money(p.price)}</div>
+            </div>
+            <div class="muted" style="font-size:0.8rem;margin-bottom:0.8rem">⏱ ${p.delivery_days} days delivery · ${p.revisions >= 99 ? 'Unlimited' : p.revisions} revisions</div>
+            <ul class="pkg-features">${(p.features || []).map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+            <button class="btn-primary" style="width:100%;margin-top:1rem" onclick="orderService(${service.id}, '${escapeHtml(p.tier)}')">Continue (${money(p.price)})</button>
+          </div>`).join('')}
+      ` : '<p class="muted">No packages available.</p>'}
+
+      ${reviews.length ? `
+        <div style="margin-top:2rem">
+          <div class="section-tag" style="color:var(--ink-light)">Reviews</div>
+          ${reviews.map(r => `
+            <div class="review-card" style="background:var(--cream);border:0.5px solid var(--border);border-radius:4px;padding:1rem 1.2rem;margin-top:0.8rem">
+              ${starHtml(r.rating)}
+              <p class="muted" style="font-style:italic;font-size:0.85rem;margin:0.3rem 0">"${escapeHtml(r.comment)}"</p>
+              <div style="font-size:0.72rem;color:var(--ink-light)">— ${escapeHtml(r.author)} · ${timeAgo(r.created_at)}</div>
+            </div>`).join('')}
+        </div>` : ''}
+    </div>`;
+  document.getElementById('svc-modal').classList.add('open');
+}
+
+function showTier(i) {
+  document.querySelectorAll('.tier-tab').forEach((t, idx) => t.classList.toggle('active', idx === i));
+  document.querySelectorAll('.tier-panel').forEach((p, idx) => p.classList.toggle('active', idx === i));
+}
+function closeSvc() { document.getElementById('svc-modal').classList.remove('open'); }
+document.getElementById('svc-modal').addEventListener('click', e => { if (e.target.id === 'svc-modal') closeSvc(); });
+
+async function orderService(serviceId, tier) {
+  if (!ME) { location.href = '/register.html'; return; }
+  if (ME.role !== 'customer') { toast('Log in as a client to place an order.', true); return; }
+  sessionStorage.setItem('pendingOrder', JSON.stringify({ serviceId, tier }));
+  location.href = '/customer.html#order';
+}
+
+init();
 </script>
 </body>
 </html>

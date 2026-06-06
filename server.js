@@ -12,6 +12,7 @@ const publicRoutes = require('./src/routes/public');
 const customerRoutes = require('./src/routes/customer');
 const architectRoutes = require('./src/routes/architect');
 const adminRoutes = require('./src/routes/admin');
+const orderRoutes = require('./src/routes/orders');
 
 seed(); // ensure demo data exists on first run
 
@@ -39,6 +40,7 @@ app.use('/api/public', publicRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/architect', architectRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/orders', orderRoutes);
 
 // --- Role-protected pages (must come before the static handler) ---
 app.get('/admin.html', pageGuard('admin'), (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));

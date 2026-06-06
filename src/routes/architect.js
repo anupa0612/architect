@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../middleware');
 const { log } = require('../activity');
+const { parseService } = require('../marketplace');
 
 const router = express.Router();
 router.use(requireRole('architect'));
@@ -13,7 +14,87 @@ router.get('/stats', (req, res) => {
   const sent = db.prepare(`SELECT COUNT(*) AS n FROM proposals WHERE architect_id=?`).get(u.id).n;
   const accepted = db.prepare(`SELECT COUNT(*) AS n FROM proposals WHERE architect_id=? AND status='accepted'`).get(u.id).n;
   const hireRate = sent ? Math.round((accepted / sent) * 100) : 0;
-  res.json({ openRequests, sent, accepted, hireRate });
+  const activeOrders = db.prepare(`SELECT COUNT(*) AS n FROM orders WHERE architect_id=? AND status IN ('active','delivered')`).get(u.id).n;
+  const earnings = db.prepare(`SELECT COALESCE(SUM(price),0) AS s FROM orders WHERE architect_id=? AND status='completed'`).get(u.id).s;
+  const services = db.prepare(`SELECT COUNT(*) AS n FROM services WHERE architect_id=?`).get(u.id).n;
+  res.json({ openRequests, sent, accepted, hireRate, activeOrders, earnings, services });
+});
+
+// ===== SERVICES (gigs) =====
+router.get('/services', (req, res) => {
+  const u = req.session.user;
+  const rows = db.prepare('SELECT * FROM services WHERE architect_id = ? ORDER BY created_at DESC').all(u.id);
+  res.json({ services: rows.map(parseService) });
+});
+
+router.post('/services', (req, res) => {
+  const u = req.session.user;
+  let { title, category, description, image, tags, packages } = req.body || {};
+  if (!title) return res.status(400).json({ error: 'Service title is required.' });
+  const prof = db.prepare('SELECT img FROM architect_profiles WHERE user_id = ?').get(u.id);
+  const info = db.prepare(`
+    INSERT INTO services (architect_id, title, category, description, image, tags, packages)
+    VALUES (?,?,?,?,?,?,?)
+  `).run(u.id, title, category || 'Residential', description || '',
+    image || (prof && prof.img) || '',
+    JSON.stringify(Array.isArray(tags) ? tags : []),
+    JSON.stringify(Array.isArray(packages) ? packages : []));
+  log(req, 'service_created', `${title} (#${info.lastInsertRowid})`);
+  res.json({ id: info.lastInsertRowid });
+});
+
+router.put('/services/:id', (req, res) => {
+  const u = req.session.user;
+  const svc = db.prepare('SELECT * FROM services WHERE id = ? AND architect_id = ?').get(req.params.id, u.id);
+  if (!svc) return res.status(404).json({ error: 'Service not found' });
+  let { title, category, description, image, tags, packages, active } = req.body || {};
+  db.prepare(`
+    UPDATE services SET title=?, category=?, description=?, image=?, tags=?, packages=?, active=? WHERE id=?
+  `).run(
+    title ?? svc.title, category ?? svc.category, description ?? svc.description,
+    image ?? svc.image,
+    JSON.stringify(Array.isArray(tags) ? tags : JSON.parse(svc.tags || '[]')),
+    JSON.stringify(Array.isArray(packages) ? packages : JSON.parse(svc.packages || '[]')),
+    active != null ? (active ? 1 : 0) : svc.active,
+    svc.id
+  );
+  log(req, 'service_updated', `#${svc.id}`);
+  res.json({ ok: true });
+});
+
+router.delete('/services/:id', (req, res) => {
+  const u = req.session.user;
+  const svc = db.prepare('SELECT * FROM services WHERE id = ? AND architect_id = ?').get(req.params.id, u.id);
+  if (!svc) return res.status(404).json({ error: 'Service not found' });
+  db.prepare('DELETE FROM services WHERE id = ?').run(svc.id);
+  log(req, 'service_deleted', `#${svc.id}`);
+  res.json({ ok: true });
+});
+
+// ===== ORDERS (as the seller) =====
+router.get('/orders', (req, res) => {
+  const u = req.session.user;
+  const rows = db.prepare(`
+    SELECT o.*, uc.name AS customer_name, s.title AS service_title,
+      (SELECT COUNT(*) FROM messages m WHERE m.order_id = o.id) AS message_count
+    FROM orders o
+    JOIN users uc ON uc.id = o.customer_id
+    LEFT JOIN services s ON s.id = o.service_id
+    WHERE o.architect_id = ?
+    ORDER BY o.created_at DESC
+  `).all(u.id);
+  res.json({ orders: rows });
+});
+
+router.post('/orders/:id/deliver', (req, res) => {
+  const u = req.session.user;
+  const o = db.prepare('SELECT * FROM orders WHERE id = ? AND architect_id = ?').get(req.params.id, u.id);
+  if (!o) return res.status(404).json({ error: 'Order not found' });
+  if (o.status !== 'active') return res.status(400).json({ error: 'Only active orders can be delivered.' });
+  db.prepare(`UPDATE orders SET status='delivered', delivery_note=?, delivered_at=datetime('now') WHERE id=?`)
+    .run((req.body && req.body.note) || '', o.id);
+  log(req, 'order_delivered', `Order #${o.id}`);
+  res.json({ ok: true });
 });
 
 // All open project requests on the platform.

@@ -13,35 +13,42 @@
   <div class="dash-header">
     <div>
       <div class="dash-welcome">Welcome back, <em style="font-style:italic" id="welcome-name">Client</em></div>
-      <p class="dash-sub">Client Portal · Manage your projects and proposals</p>
+      <p class="dash-sub">Client Portal · Orders, projects &amp; proposals</p>
     </div>
-    <button class="btn-primary" onclick="openPostModal()">+ Post a Project</button>
+    <div style="display:flex;gap:0.6rem">
+      <a class="btn-secondary" href="/#services">Browse Services</a>
+      <button class="btn-primary" onclick="openPostModal()">+ Post a Project</button>
+    </div>
   </div>
 
   <div class="stat-grid" id="stat-grid"></div>
 
   <div class="dash-tabs">
-    <button class="dash-tab active" data-tab="projects">My Projects</button>
+    <button class="dash-tab active" data-tab="orders">My Orders</button>
+    <button class="dash-tab" data-tab="projects">My Projects</button>
     <button class="dash-tab" data-tab="proposals">Proposals Received</button>
   </div>
 
-  <div class="dash-tab-content active" id="tab-projects">
-    <div class="cards-list" id="projects-list"></div>
-  </div>
+  <div class="dash-tab-content active" id="tab-orders"><div class="cards-list" id="orders-list"></div></div>
+  <div class="dash-tab-content" id="tab-projects"><div class="cards-list" id="projects-list"></div></div>
+  <div class="dash-tab-content" id="tab-proposals"><div id="all-proposals"></div></div>
+</div>
 
-  <div class="dash-tab-content" id="tab-proposals">
-    <div id="all-proposals"></div>
-  </div>
+<!-- ORDER CHECKOUT MODAL -->
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal"><div class="modal-pad" id="checkout-body"></div></div>
+</div>
+
+<!-- REVIEW MODAL -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal"><div class="modal-pad" id="review-body"></div></div>
 </div>
 
 <!-- POST PROJECT MODAL -->
 <div class="modal-overlay" id="post-modal">
   <div class="modal wide">
     <div class="modal-pad">
-      <div class="modal-head">
-        <h3>Post a Project Brief</h3>
-        <button class="modal-x" onclick="closePost()">✕</button>
-      </div>
+      <div class="modal-head"><h3>Post a Project Brief</h3><button class="modal-x" onclick="closePost()">✕</button></div>
       <form id="post-form">
         <div class="form-row">
           <div class="form-group"><label>Project Title</label><input type="text" id="p-title" placeholder="e.g. Lakeside Residence" required></div>
@@ -49,21 +56,12 @@
         </div>
         <div class="form-group">
           <label>Project Type</label>
-          <select id="p-type">
-            <option>Residential</option><option>Commercial</option><option>Mixed-Use</option>
-            <option>Landscape</option><option>Interior</option><option>Renovation</option>
-          </select>
+          <select id="p-type"><option>Residential</option><option>Commercial</option><option>Mixed-Use</option><option>Landscape</option><option>Interior</option><option>Renovation</option></select>
         </div>
         <div class="form-group"><label>Description</label><textarea id="p-desc" placeholder="Describe your vision, requirements and ideas..."></textarea></div>
         <div class="form-row">
-          <div class="form-group">
-            <label>Property Size</label>
-            <select id="p-size"><option value="">Select</option><option>Under 100 sqm</option><option>100 – 300 sqm</option><option>300 – 600 sqm</option><option>600 – 1,000 sqm</option><option>Over 1,000 sqm</option></select>
-          </div>
-          <div class="form-group">
-            <label>Timeline</label>
-            <select id="p-timeline"><option value="">Select</option><option>Less than 6 months</option><option>6 – 12 months</option><option>1 – 2 years</option><option>2 – 3 years</option><option>Flexible</option></select>
-          </div>
+          <div class="form-group"><label>Property Size</label><select id="p-size"><option value="">Select</option><option>Under 100 sqm</option><option>100 – 300 sqm</option><option>300 – 600 sqm</option><option>600 – 1,000 sqm</option><option>Over 1,000 sqm</option></select></div>
+          <div class="form-group"><label>Timeline</label><select id="p-timeline"><option value="">Select</option><option>Less than 6 months</option><option>6 – 12 months</option><option>1 – 2 years</option><option>2 – 3 years</option><option>Flexible</option></select></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Budget</label><input type="text" id="p-budget" placeholder="e.g. $150,000"></div>
@@ -76,9 +74,7 @@
 </div>
 
 <!-- VIEW PROPOSALS MODAL -->
-<div class="modal-overlay" id="prop-modal">
-  <div class="modal wide"><div class="modal-pad" id="prop-content"></div></div>
-</div>
+<div class="modal-overlay" id="prop-modal"><div class="modal wide"><div class="modal-pad" id="prop-content"></div></div></div>
 
 <script src="/js/common.js"></script>
 <script>
@@ -88,68 +84,151 @@ async function init() {
   ME = await renderNav();
   if (!ME) return;
   document.getElementById('welcome-name').textContent = ME.name.split(' ')[0];
-  await loadProjects();
+  await Promise.all([loadOrders(), loadProjects()]);
+  handlePendingOrder();
 }
 
-async function loadProjects() {
-  const { projects } = await api('/api/customer/projects');
-  const open = projects.filter(p => p.status === 'open').length;
-  const hired = projects.filter(p => p.status === 'hired').length;
+// ===== STATS =====
+async function loadStats() {
+  const [{ orders }, { projects }] = await Promise.all([api('/api/customer/orders'), api('/api/customer/projects')]);
+  const active = orders.filter(o => ['active', 'delivered'].includes(o.status)).length;
+  const spent = orders.filter(o => o.status === 'completed').reduce((s, o) => s + (o.price || 0), 0);
   const totalProps = projects.reduce((s, p) => s + p.proposal_count, 0);
   document.getElementById('stat-grid').innerHTML = `
-    <div class="stat-card"><div class="label">Total Projects</div><div class="value">${projects.length}</div></div>
-    <div class="stat-card"><div class="label">Open Briefs</div><div class="value">${open}</div></div>
-    <div class="stat-card"><div class="label">Proposals Received</div><div class="value gold">${totalProps}</div></div>
-    <div class="stat-card"><div class="label">Architects Hired</div><div class="value">${hired}</div></div>`;
-
-  const list = document.getElementById('projects-list');
-  if (!projects.length) {
-    list.innerHTML = '<p class="empty">No projects yet. Click “Post a Project” to get started.</p>';
-  } else {
-    list.innerHTML = projects.map(p => `
-      <div class="list-card">
-        <div>
-          <div class="lc-type">${escapeHtml(p.type || 'Project')}</div>
-          <div class="lc-title">${escapeHtml(p.title)}</div>
-          <div class="lc-details">
-            <div class="lc-detail"><strong>${escapeHtml(p.budget || '—')}</strong>Budget</div>
-            <div class="lc-detail"><strong>${escapeHtml(p.location || '—')}</strong>Location</div>
-            <div class="lc-detail"><strong>${escapeHtml(p.timeline || '—')}</strong>Timeline</div>
-            <div class="lc-detail"><strong>${p.proposal_count}</strong>Proposals</div>
-          </div>
-        </div>
-        <div class="lc-actions">
-          <span class="status-badge status-${p.status}">${escapeHtml(p.status)}</span>
-          <button class="btn-hire btn-sm" onclick="viewProposals(${p.id})">View Proposals (${p.proposal_count})</button>
-        </div>
-      </div>`).join('');
-  }
-  renderAllProposals(projects);
+    <div class="stat-card"><div class="label">Active Orders</div><div class="value">${active}</div></div>
+    <div class="stat-card"><div class="label">Total Orders</div><div class="value">${orders.length}</div></div>
+    <div class="stat-card"><div class="label">Total Spent</div><div class="value gold">${money(spent)}</div></div>
+    <div class="stat-card"><div class="label">Proposals Received</div><div class="value">${totalProps}</div></div>`;
 }
 
-async function renderAllProposals(projects) {
-  const wrap = document.getElementById('all-proposals');
+// ===== ORDERS =====
+async function loadOrders() {
+  const { orders } = await api('/api/customer/orders');
+  const list = document.getElementById('orders-list');
+  list.innerHTML = orders.length ? orders.map(o => `
+    <div class="list-card">
+      <div>
+        <div class="lc-type">${escapeHtml(o.package_name || '')} · ${escapeHtml(o.package_tier || '')}</div>
+        <div class="lc-title">${escapeHtml(o.title || 'Order')}</div>
+        <div class="lc-details">
+          <div class="lc-detail"><strong>${escapeHtml(o.architect_name)}</strong>Architect</div>
+          <div class="lc-detail"><strong>${money(o.price)}</strong>Price</div>
+          <div class="lc-detail"><strong>${o.delivery_days} days</strong>Delivery</div>
+        </div>
+        ${o.delivery_note ? `<p class="muted" style="font-size:0.8rem;margin-top:0.5rem">Delivery note: ${escapeHtml(o.delivery_note)}</p>` : ''}
+      </div>
+      <div class="lc-actions">
+        <span class="status-badge status-${o.status}">${escapeHtml(o.status)}</span>
+        <button class="btn-hire btn-sm" onclick="openMessages(${o.id})">Message${o.message_count ? ' (' + o.message_count + ')' : ''}</button>
+        ${o.status === 'delivered' ? `<button class="btn-hire btn-sm" onclick="completeOrder(${o.id})">Approve &amp; Complete</button>` : ''}
+        ${o.status === 'completed' && !o.reviewed ? `<button class="btn-hire btn-sm" onclick="openReview(${o.id})">Leave Review</button>` : ''}
+        ${['active','delivered'].includes(o.status) ? `<button class="btn-hire btn-sm btn-danger" onclick="cancelOrder(${o.id})">Cancel</button>` : ''}
+      </div>
+    </div>`).join('') : '<p class="empty">No orders yet. <a href="/#services">Browse services</a> to place your first order.</p>';
+  loadStats();
+}
+
+async function completeOrder(id) {
+  try { await api(`/api/customer/orders/${id}/complete`, { method: 'POST' }); toast('Order completed! You can now leave a review.'); loadOrders(); }
+  catch (e) { toast(e.message, true); }
+}
+async function cancelOrder(id) {
+  if (!confirm('Cancel this order?')) return;
+  try { await api(`/api/customer/orders/${id}/cancel`, { method: 'POST' }); toast('Order cancelled.'); loadOrders(); }
+  catch (e) { toast(e.message, true); }
+}
+
+// ===== CHECKOUT (from marketplace) =====
+function handlePendingOrder() {
+  const raw = sessionStorage.getItem('pendingOrder');
+  if (!raw) return;
+  sessionStorage.removeItem('pendingOrder');
+  const { serviceId, tier } = JSON.parse(raw);
+  openCheckout(serviceId, tier);
+}
+
+async function openCheckout(serviceId, tier) {
+  const { service } = await api('/api/public/services/' + serviceId);
+  const pkg = (service.packages || []).find(p => p.tier === tier) || service.packages[0];
+  document.getElementById('checkout-body').innerHTML = `
+    <div class="modal-head"><h3>Confirm Your Order</h3><button class="modal-x" onclick="document.getElementById('checkout-modal').classList.remove('open')">✕</button></div>
+    <div class="package-card featured">
+      <div class="pkg-header"><div class="pkg-name">${escapeHtml(service.title)}</div><div class="pkg-price">${money(pkg.price)}</div></div>
+      <div class="muted" style="font-size:0.8rem;margin-bottom:0.6rem">${escapeHtml(pkg.tier)} · ${escapeHtml(pkg.name)} · ${pkg.delivery_days} days · with ${escapeHtml(service.architect_name)}</div>
+      <ul class="pkg-features">${(pkg.features || []).map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+    </div>
+    <div class="form-group"><label>Project Requirements</label><textarea id="ck-req" placeholder="Describe what you need so the architect can start..."></textarea></div>
+    <button class="btn-primary" style="width:100%" onclick="placeOrder(${service.id}, '${escapeHtml(pkg.tier)}')">Place Order · ${money(pkg.price)}</button>`;
+  document.getElementById('checkout-modal').classList.add('open');
+}
+
+async function placeOrder(serviceId, tier) {
+  try {
+    await api('/api/customer/orders', { method: 'POST', body: { service_id: serviceId, package_tier: tier, requirements: document.getElementById('ck-req').value } });
+    document.getElementById('checkout-modal').classList.remove('open');
+    toast('Order placed! Your architect has been notified.');
+    document.querySelector('[data-tab="orders"]').click();
+    loadOrders();
+  } catch (e) { toast(e.message, true); }
+}
+
+// ===== REVIEW =====
+function openReview(orderId) {
+  document.getElementById('review-body').innerHTML = `
+    <div class="modal-head"><h3>Leave a Review</h3><button class="modal-x" onclick="document.getElementById('review-modal').classList.remove('open')">✕</button></div>
+    <div class="form-group"><label>Rating</label>
+      <div class="star-input">
+        ${[5,4,3,2,1].map(n => `<input type="radio" name="rt" id="rt${n}" value="${n}" ${n===5?'checked':''}><label for="rt${n}">★</label>`).join('')}
+      </div>
+    </div>
+    <div class="form-group"><label>Comment</label><textarea id="rv-comment" placeholder="Share your experience..."></textarea></div>
+    <button class="btn-primary" style="width:100%" onclick="submitReview(${orderId})">Submit Review</button>`;
+  document.getElementById('review-modal').classList.add('open');
+}
+async function submitReview(orderId) {
+  const rating = (document.querySelector('input[name="rt"]:checked') || {}).value || 5;
+  try {
+    await api(`/api/customer/orders/${orderId}/review`, { method: 'POST', body: { rating: Number(rating), comment: document.getElementById('rv-comment').value } });
+    document.getElementById('review-modal').classList.remove('open');
+    toast('Thanks for your review!');
+    loadOrders();
+  } catch (e) { toast(e.message, true); }
+}
+
+// ===== PROJECTS (Upwork-style) =====
+async function loadProjects() {
+  const { projects } = await api('/api/customer/projects');
+  const list = document.getElementById('projects-list');
+  list.innerHTML = projects.length ? projects.map(p => `
+    <div class="list-card">
+      <div>
+        <div class="lc-type">${escapeHtml(p.type || 'Project')}</div>
+        <div class="lc-title">${escapeHtml(p.title)}</div>
+        <div class="lc-details">
+          <div class="lc-detail"><strong>${escapeHtml(p.budget || '—')}</strong>Budget</div>
+          <div class="lc-detail"><strong>${escapeHtml(p.location || '—')}</strong>Location</div>
+          <div class="lc-detail"><strong>${p.proposal_count}</strong>Proposals</div>
+        </div>
+      </div>
+      <div class="lc-actions">
+        <span class="status-badge status-${p.status}">${escapeHtml(p.status)}</span>
+        <button class="btn-hire btn-sm" onclick="viewProposals(${p.id})">View Proposals (${p.proposal_count})</button>
+      </div>
+    </div>`).join('') : '<p class="empty">No projects yet. Click “Post a Project”.</p>';
   const withProps = projects.filter(p => p.proposal_count > 0);
-  if (!withProps.length) { wrap.innerHTML = '<p class="empty">No proposals received yet.</p>'; return; }
-  wrap.innerHTML = withProps.map(p =>
-    `<button class="btn-secondary btn-sm" style="margin:0 0.5rem 0.5rem 0" onclick="viewProposals(${p.id})">${escapeHtml(p.title)} · ${p.proposal_count}</button>`
-  ).join('') + '<p class="muted" style="margin-top:1rem;font-size:0.82rem">Click a project to review and accept proposals.</p>';
+  document.getElementById('all-proposals').innerHTML = withProps.length
+    ? withProps.map(p => `<button class="btn-secondary btn-sm" style="margin:0 0.5rem 0.5rem 0" onclick="viewProposals(${p.id})">${escapeHtml(p.title)} · ${p.proposal_count}</button>`).join('')
+    : '<p class="empty">No proposals received yet.</p>';
 }
 
 async function viewProposals(projectId) {
   const { project, proposals } = await api(`/api/customer/projects/${projectId}/proposals`);
   document.getElementById('prop-content').innerHTML = `
-    <div class="modal-head">
-      <h3>${escapeHtml(project.title)}</h3>
-      <button class="modal-x" onclick="document.getElementById('prop-modal').classList.remove('open')">✕</button>
-    </div>
+    <div class="modal-head"><h3>${escapeHtml(project.title)}</h3><button class="modal-x" onclick="document.getElementById('prop-modal').classList.remove('open')">✕</button></div>
     ${proposals.length ? proposals.map(pr => `
       <div class="package-card ${pr.status === 'accepted' ? 'featured' : ''}">
         <div class="pkg-header">
-          <div>
-            <div class="pkg-name">${escapeHtml(pr.architect_name)}</div>
-            <div class="muted" style="font-size:0.78rem">${escapeHtml(pr.studio || '')} · ${escapeHtml(pr.location || '')} · ★ ${pr.rating ?? '—'}</div>
-          </div>
+          <div><div class="pkg-name">${escapeHtml(pr.architect_name)}</div><div class="muted" style="font-size:0.78rem">${escapeHtml(pr.studio || '')} · ${escapeHtml(pr.location || '')}</div></div>
           <span class="status-badge status-${pr.status}">${escapeHtml(pr.status)}</span>
         </div>
         <p class="muted" style="font-size:0.85rem;margin:0.4rem 0 0.8rem">${escapeHtml(pr.message || 'No message.')}</p>
@@ -158,59 +237,42 @@ async function viewProposals(projectId) {
           <div class="lc-detail"><strong>${escapeHtml(pr.quote || '—')}</strong>Quote</div>
           <div class="lc-detail"><strong>${escapeHtml(pr.timeline || '—')}</strong>Timeline</div>
         </div>
-        ${pr.status === 'sent' ? `
-          <div style="display:flex;gap:0.6rem;margin-top:1rem">
-            <button class="btn-hire btn-sm" onclick="decide(${pr.id},'accept',${projectId})">Accept ✓</button>
-            <button class="btn-hire btn-sm btn-danger" onclick="decide(${pr.id},'decline',${projectId})">Decline</button>
-          </div>` : ''}
-      </div>`).join('') : '<p class="empty">No proposals yet for this project.</p>'}`;
+        ${pr.status === 'sent' ? `<div style="display:flex;gap:0.6rem;margin-top:1rem">
+          <button class="btn-hire btn-sm" onclick="decide(${pr.id},'accept',${projectId})">Accept ✓</button>
+          <button class="btn-hire btn-sm btn-danger" onclick="decide(${pr.id},'decline',${projectId})">Decline</button></div>` : ''}
+      </div>`).join('') : '<p class="empty">No proposals yet.</p>'}`;
   document.getElementById('prop-modal').classList.add('open');
 }
-
 async function decide(id, decision, projectId) {
-  try {
-    await api(`/api/customer/proposals/${id}/${decision}`, { method: 'POST' });
-    toast(`Proposal ${decision === 'accept' ? 'accepted' : 'declined'}.`);
-    await loadProjects();
-    viewProposals(projectId);
-  } catch (e) { toast(e.message, true); }
+  try { await api(`/api/customer/proposals/${id}/${decision}`, { method: 'POST' }); toast(`Proposal ${decision}d.`); await loadProjects(); viewProposals(projectId); }
+  catch (e) { toast(e.message, true); }
 }
 
+// ===== POST PROJECT =====
 function openPostModal() { document.getElementById('post-modal').classList.add('open'); }
 function closePost() { document.getElementById('post-modal').classList.remove('open'); }
-
 document.getElementById('post-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const body = {
-    title: document.getElementById('p-title').value,
-    type: document.getElementById('p-type').value,
-    location: document.getElementById('p-location').value,
-    description: document.getElementById('p-desc').value,
-    size: document.getElementById('p-size').value,
-    timeline: document.getElementById('p-timeline').value,
-    budget: document.getElementById('p-budget').value,
-    style: document.getElementById('p-style').value
+    title: document.getElementById('p-title').value, type: document.getElementById('p-type').value,
+    location: document.getElementById('p-location').value, description: document.getElementById('p-desc').value,
+    size: document.getElementById('p-size').value, timeline: document.getElementById('p-timeline').value,
+    budget: document.getElementById('p-budget').value, style: document.getElementById('p-style').value
   };
-  try {
-    await api('/api/customer/projects', { method: 'POST', body });
-    closePost();
-    document.getElementById('post-form').reset();
-    toast('Project posted! Architects can now see it.');
-    await loadProjects();
-  } catch (err) { toast(err.message, true); }
+  try { await api('/api/customer/projects', { method: 'POST', body }); closePost(); e.target.reset(); toast('Project posted!'); loadProjects(); }
+  catch (err) { toast(err.message, true); }
 });
 
-[['post-modal', closePost], ['prop-modal', () => document.getElementById('prop-modal').classList.remove('open')]]
-  .forEach(([id, fn]) => document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) fn(); }));
+// modal backdrop close
+['post-modal','prop-modal','checkout-modal','review-modal'].forEach(id =>
+  document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) document.getElementById(id).classList.remove('open'); }));
 
-document.querySelectorAll('.dash-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-  });
-});
+document.querySelectorAll('.dash-tab').forEach(tab => tab.addEventListener('click', () => {
+  document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+}));
 
 init();
 </script>
