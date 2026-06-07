@@ -161,15 +161,16 @@ async function renderNav() {
       <li><a href="#" onclick="logout();return false" class="nav-cta">Log Out</a></li>`;
   } else {
     right = `
-      <li><a href="/login.html">Log In</a></li>
-      <li><a href="/register.html" class="nav-cta">Get Started</a></li>`;
+      <li><a href="/login.html" class="nav-login">Log in</a></li>
+      <li><a href="/register.html" class="nav-cta">Sign up</a></li>`;
   }
   nav.innerHTML = `
     <a href="/" class="nav-logo">Arch<span>Hire</span></a>
     <button type="button" class="nav-toggle" aria-label="Open menu" onclick="toggleMobileNav()">☰</button>
     <ul class="nav-links">
-      <li><a href="/#services" onclick="closeMobileNav()">Services</a></li>
-      <li><a href="/#how" onclick="closeMobileNav()">How It Works</a></li>
+      <li><a href="/#services" onclick="closeMobileNav()">Hire architects</a></li>
+      <li><a href="/register.html" onclick="closeMobileNav()">Find work</a></li>
+      <li><a href="/#how" onclick="closeMobileNav()">How it works</a></li>
       ${right}
     </ul>`;
   let backdrop = document.querySelector('.nav-backdrop');

@@ -10,27 +10,43 @@
 
 <nav id="nav"></nav>
 
-<section class="search-hero">
-  <h1>Hire the world's best <em>architects</em></h1>
-  <p>Browse ready-to-order design services, or post a project and receive proposals.</p>
-  <div class="search-box">
-    <input id="search-input" placeholder="Search: villa design, office fit-out, landscape..." onkeydown="if(event.key==='Enter')doSearch()">
-    <button onclick="doSearch()">Search</button>
-  </div>
-  <div class="search-tags">
-    Popular:
-    <a href="#" onclick="quickSearch('villa');return false">Villa Design</a>·
-    <a href="#" onclick="quickSearch('office');return false">Office Spaces</a>·
-    <a href="#" onclick="quickSearch('landscape');return false">Landscape</a>·
-    <a href="#" onclick="quickSearch('sustainable');return false">Sustainable</a>
+<div class="promo-banner">
+  <span>Connect with verified architects for homes, offices, and bespoke spaces.</span>
+  <a href="/register.html">Get started →</a>
+</div>
+
+<section class="home-hero has-banner">
+  <div class="home-hero-bg"></div>
+  <div class="home-hero-inner">
+    <h1>Build at the speed of your <em>vision</em></h1>
+    <p class="home-hero-sub">Hire architects who turn complex briefs into homes, offices, and spaces that last.</p>
+
+    <div class="role-toggle" id="role-toggle">
+      <button type="button" class="role-btn active" data-role="hire">I want to hire</button>
+      <button type="button" class="role-btn" data-role="work">I want to work</button>
+    </div>
+
+    <div class="hero-search">
+      <input id="search-input" placeholder="Describe what you need — villa, office, renovation..." onkeydown="if(event.key==='Enter')doSearch()">
+      <button type="button" onclick="doSearch()"><span aria-hidden="true">🔍</span> Search</button>
+    </div>
+
+    <div class="quick-tags" id="quick-tags">
+      <button type="button" onclick="quickSearch('residential')">Residential design →</button>
+      <button type="button" onclick="quickSearch('commercial')">Commercial spaces →</button>
+      <button type="button" onclick="quickSearch('interior')">Interior architecture →</button>
+      <button type="button" onclick="quickSearch('landscape')">Landscape design →</button>
+    </div>
+
+    <p class="trust-strip" id="trust-strip">Trusted by architects &amp; clients worldwide</p>
   </div>
 </section>
 
 <section class="section" id="services">
   <div class="section-header" style="margin-bottom:2rem">
     <div class="section-tag">The Marketplace</div>
-    <h2>Architecture Services</h2>
-    <p class="section-sub">Fixed-scope design packages you can order in minutes.</p>
+    <h2>Architecture services</h2>
+    <p class="section-sub">Browse fixed-scope packages from top architects — order in minutes, collaborate until delivery.</p>
   </div>
   <div class="cat-chips" id="cat-chips"></div>
   <div class="gig-grid" id="gig-grid"></div>
@@ -39,49 +55,85 @@
 <section class="how-section" id="how">
   <div class="section-header">
     <div class="section-tag">The Process</div>
-    <h2>How ArchHire Works</h2>
-    <p class="section-sub" style="color:rgba(250,248,244,0.55)">Two ways to work — order a service, or post a project for proposals.</p>
+    <h2>How ArchHire works</h2>
+    <p class="section-sub" style="color:rgba(250,248,244,0.55)">Hire like a marketplace, or post a project and receive proposals — your choice.</p>
   </div>
   <div class="steps-grid">
-    <div class="step"><div class="step-num">01</div><div class="step-icon">✦</div><h3>Find or Post</h3><p>Browse architects' service packages, or post a project brief for the Upwork-style proposal flow.</p></div>
-    <div class="step"><div class="step-num">02</div><div class="step-icon">◎</div><h3>Order or Review</h3><p>Order a package directly, or compare incoming proposals from interested architects.</p></div>
-    <div class="step"><div class="step-num">03</div><div class="step-icon">◈</div><h3>Collaborate</h3><p>Share requirements and chat with your architect in the order workspace until delivery.</p></div>
-    <div class="step"><div class="step-num">04</div><div class="step-icon">❋</div><h3>Approve &amp; Review</h3><p>Approve the delivery, mark it complete, and leave a review to build their reputation.</p></div>
+    <div class="step"><div class="step-num">01</div><div class="step-icon">✦</div><h3>Search or post</h3><p>Find a ready-made service package, or publish a project brief for architects to bid on.</p></div>
+    <div class="step"><div class="step-num">02</div><div class="step-icon">◎</div><h3>Match &amp; order</h3><p>Pick your architect, choose a package tier, and place your order with clear requirements.</p></div>
+    <div class="step"><div class="step-num">03</div><div class="step-icon">◈</div><h3>Collaborate</h3><p>Message your architect in the order workspace until designs are delivered.</p></div>
+    <div class="step"><div class="step-num">04</div><div class="step-icon">❋</div><h3>Approve &amp; review</h3><p>Mark complete, leave a rating, and help great architects build their reputation.</p></div>
   </div>
 </section>
 
 <section class="section" style="background:var(--cream-dark);text-align:center">
   <div class="section-header" style="margin-bottom:2rem">
-    <div class="section-tag">For Architects</div>
+    <div class="section-tag">For architects</div>
     <h2>Grow your studio</h2>
-    <p class="section-sub">List your services, win projects, and manage orders — all in one place.</p>
+    <p class="section-sub">List services, win projects, manage orders, and earn — all on one platform.</p>
   </div>
   <div class="hero-btns" style="justify-content:center">
-    <a class="btn-primary" href="/register.html">Become a Seller</a>
-    <a class="btn-secondary" href="/login.html">Log In</a>
+    <a class="btn-primary" href="/register.html">Start selling</a>
+    <a class="btn-secondary" href="/login.html">Log in</a>
   </div>
 </section>
 
-<!-- SERVICE DETAIL MODAL -->
 <div class="modal-overlay" id="svc-modal">
   <div class="modal wide" id="svc-content"></div>
 </div>
 
 <script src="/js/common.js"></script>
 <script>
-let ME, CATEGORY = 'All', SEARCH = '';
+let ME, CATEGORY = 'All', SEARCH = '', USER_ROLE = 'hire';
+
+const PLACEHOLDERS = {
+  hire: 'Describe what you need — villa, office, renovation...',
+  work: 'Search opportunities — residential, commercial, landscape...'
+};
 
 async function init() {
   ME = await renderNav();
-  loadStats();
+  setupRoleToggle();
+  await loadStats();
   await loadCategories();
   await loadServices();
+}
+
+function setupRoleToggle() {
+  document.querySelectorAll('.role-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      USER_ROLE = btn.dataset.role;
+      document.getElementById('search-input').placeholder = PLACEHOLDERS[USER_ROLE];
+      if (USER_ROLE === 'work') {
+        document.getElementById('quick-tags').innerHTML = `
+          <button type="button" onclick="location.href='/register.html'">Create architect profile →</button>
+          <button type="button" onclick="location.href='/login.html'">Log in to dashboard →</button>
+          <button type="button" onclick="quickSearch('residential')">Browse residential briefs →</button>
+          <button type="button" onclick="quickSearch('commercial')">Browse commercial briefs →</button>`;
+      } else {
+        document.getElementById('quick-tags').innerHTML = `
+          <button type="button" onclick="quickSearch('residential')">Residential design →</button>
+          <button type="button" onclick="quickSearch('commercial')">Commercial spaces →</button>
+          <button type="button" onclick="quickSearch('interior')">Interior architecture →</button>
+          <button type="button" onclick="quickSearch('landscape')">Landscape design →</button>`;
+      }
+    });
+  });
 }
 
 async function loadStats() {
   try {
     const s = await api('/api/public/stats');
-    // reflected subtly in hero copy if desired; kept minimal here
+    const parts = [];
+    if (s.architects) parts.push(s.architects + '+ architects');
+    if (s.projects) parts.push(s.projects + '+ projects');
+    if (s.countries) parts.push(s.countries + ' countries');
+    if (parts.length) {
+      document.getElementById('trust-strip').textContent =
+        'Trusted by ' + parts.join(' · ');
+    }
   } catch (_) {}
 }
 
@@ -89,7 +141,7 @@ async function loadCategories() {
   const { categories } = await api('/api/public/categories');
   const chips = [{ category: 'All' }, ...categories];
   document.getElementById('cat-chips').innerHTML = chips.map(c =>
-    `<button class="cat-chip ${c.category === CATEGORY ? 'active' : ''}" onclick="setCategory('${escapeHtml(c.category)}')">${escapeHtml(c.category)}${c.n ? ` (${c.n})` : ''}</button>`
+    `<button type="button" class="cat-chip ${c.category === CATEGORY ? 'active' : ''}" onclick="setCategory('${escapeHtml(c.category)}')">${escapeHtml(c.category)}${c.n ? ` (${c.n})` : ''}</button>`
   ).join('');
 }
 
@@ -98,8 +150,24 @@ function setCategory(cat) {
   document.querySelectorAll('.cat-chip').forEach(c => c.classList.toggle('active', c.textContent.startsWith(cat)));
   loadServices();
 }
-function doSearch() { SEARCH = document.getElementById('search-input').value.trim(); loadServices(); document.getElementById('services').scrollIntoView({ behavior: 'smooth' }); }
-function quickSearch(q) { document.getElementById('search-input').value = q; doSearch(); }
+
+function doSearch() {
+  if (USER_ROLE === 'work' && !document.getElementById('search-input').value.trim()) {
+    location.href = '/register.html';
+    return;
+  }
+  SEARCH = document.getElementById('search-input').value.trim();
+  loadServices();
+  document.getElementById('services').scrollIntoView({ behavior: 'smooth' });
+}
+
+function quickSearch(q) {
+  document.getElementById('search-input').value = q;
+  USER_ROLE = 'hire';
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.toggle('active', b.dataset.role === 'hire'));
+  document.getElementById('search-input').placeholder = PLACEHOLDERS.hire;
+  doSearch();
+}
 
 async function loadServices() {
   const params = new URLSearchParams();
@@ -107,7 +175,10 @@ async function loadServices() {
   if (CATEGORY && CATEGORY !== 'All') params.set('category', CATEGORY);
   const { services } = await api('/api/public/services?' + params.toString());
   const grid = document.getElementById('gig-grid');
-  if (!services.length) { grid.innerHTML = '<p class="empty">No services found. Try another search.</p>'; return; }
+  if (!services.length) {
+    grid.innerHTML = '<p class="empty">No services found. Try another search or <a href="/register.html">post a project</a>.</p>';
+    return;
+  }
   grid.innerHTML = services.map(s => {
     const from = (s.packages[0] && s.packages[0].price) || 0;
     return `
@@ -134,7 +205,7 @@ async function openService(id) {
   const pkgs = service.packages || [];
   c.innerHTML = `
     <div style="position:relative;height:240px;overflow:hidden">
-      <img src="${escapeHtml(service.image)}" style="width:100%;height:100%;object-fit:cover">
+      <img src="${escapeHtml(service.image)}" style="width:100%;height:100%;object-fit:cover" alt="">
       <button class="modal-x" style="position:absolute;top:1rem;right:1rem;color:var(--cream)" onclick="closeSvc()">✕</button>
     </div>
     <div class="modal-pad">
@@ -146,14 +217,13 @@ async function openService(id) {
         ${starHtml(service.rating, service.reviews_count)}
       </div>
       <p class="muted" style="line-height:1.8;margin-bottom:1.5rem">${escapeHtml(service.description || '')}</p>
-
       ${pkgs.length ? `
         <div class="tier-tabs" id="tier-tabs">
-          ${pkgs.map((p, i) => `<button class="tier-tab ${i === 0 ? 'active' : ''}" onclick="showTier(${i})">${escapeHtml(p.tier)}</button>`).join('')}
+          ${pkgs.map((p, i) => `<button type="button" class="tier-tab ${i === 0 ? 'active' : ''}" onclick="showTier(${i})">${escapeHtml(p.tier)}</button>`).join('')}
         </div>
         ${pkgs.map((p, i) => `
           <div class="tier-panel ${i === 0 ? 'active' : ''}" id="tier-${i}">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem;flex-wrap:wrap;gap:0.5rem">
               <div class="pkg-name">${escapeHtml(p.name)}</div>
               <div class="pkg-price" style="font-size:1.4rem">${money(p.price)}</div>
             </div>
@@ -162,7 +232,6 @@ async function openService(id) {
             <button class="btn-primary" style="width:100%;margin-top:1rem" onclick="orderService(${service.id}, '${escapeHtml(p.tier)}')">Continue (${money(p.price)})</button>
           </div>`).join('')}
       ` : '<p class="muted">No packages available.</p>'}
-
       ${reviews.length ? `
         <div style="margin-top:2rem">
           <div class="section-tag" style="color:var(--ink-light)">Reviews</div>
